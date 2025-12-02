@@ -8,8 +8,8 @@ A **Chrome/Brave browser extension** that transforms your new tab page into a be
 
 ### Key Features
 
-- 🔐 **Secure Pinterest Authentication** - OAuth 2.0 login to access your account
-- 🔒 **Private Board Access** - View pins from your secret/private boards
+- 🍪 **Session-based Authentication** - Uses your active Pinterest login (no API keys needed)
+- 🔒 **Private Board Access** - View pins from your secret/private boards (via your session)
 - 🎨 **Beautiful UI** - Premium masonry grid with smooth animations
 - 🎲 **Random Selection** - Fresh pins every time you refresh
 - ⚡ **Smart Caching** - Fast loading with intelligent cache management
@@ -22,8 +22,10 @@ A **Chrome/Brave browser extension** that transforms your new tab page into a be
 
 - **Manifest V3** - Latest Chrome extension standard
 - **Vanilla JavaScript** - No frameworks, pure JS
-- **Pinterest API v5** - Official Pinterest REST API
-- **OAuth 2.0** - Secure authentication
+- **Manifest V3** - Latest Chrome extension standard
+- **Vanilla JavaScript** - No frameworks, pure JS
+- **DOM Parsing** - Extracting data from Pinterest's internal JSON
+- **Session Cookies** - Piggybacking on browser session
 - **Chrome Storage API** - Local data persistence
 - **CSS Grid & Columns** - Responsive masonry layout
 
@@ -37,8 +39,8 @@ The project is divided into **7 phases**, each building on the previous:
 |-------|-------|----------|------------|
 | **1** | Project Setup & Research | 1-2 hours | ⭐⭐ Easy |
 | **2** | Extension Foundation | 2-3 hours | ⭐⭐⭐ Medium |
-| **3** | Pinterest Authentication | 3-4 hours | ⭐⭐⭐⭐ Hard |
-| **4** | Board Selection & Data | 2-3 hours | ⭐⭐⭐ Medium |
+| **3** | Session Management | 1-2 hours | ⭐⭐ Easy |
+| **4** | Data Scraping | 3-4 hours | ⭐⭐⭐⭐ Hard |
 | **5** | Display & UI | 3-4 hours | ⭐⭐⭐⭐ Hard |
 | **6** | Polish & Testing | 2-3 hours | ⭐⭐⭐ Medium |
 | **7** | Documentation | 1-2 hours | ⭐⭐ Easy |
@@ -59,16 +61,16 @@ If you have multiple people or agents working on this, you can split the work in
 *   **Action:** Set up the repo, create the empty files, and push to Git.
 
 ### ⚡ Parallel Track A: The "Logic" Team
-**Focus:** Authentication, API, and Data Management
-**Phases:** 3 (Auth) & 4 (Data)
+**Focus:** Session Handling and Data Scraping
+**Phases:** 3 (Session) & 4 (Scraping)
 
 This team works on the "invisible" parts of the extension.
 *   **Tasks:**
-    *   Implement OAuth flow (`auth/pinterest-auth.js`)
-    *   Build the API Client (`api/pinterest-client.js`)
-    *   Handle Token Refresh logic
+    *   Implement Session Check (`auth/session-manager.js`)
+    *   Build the Scraper (`api/pinterest-scraper.js`)
+    *   Reverse-engineer Pinterest's internal JSON structure
     *   Implement the Random Selection algorithm
-*   **Independence:** They don't need a beautiful UI to test. They can test by logging data to the console or using the simple debug panel.
+*   **Independence:** They don't need a beautiful UI to test. They can test by logging data to the console.
 
 ### 🎨 Parallel Track B: The "UI" Team
 **Focus:** Visuals, Animations, and Layout
@@ -90,7 +92,6 @@ This team works on the "visible" parts.
     *   Design the Icons (16x16, 48x48, 128x128)
     *   Write the `README.md` and User Guides
     *   Prepare the Chrome Web Store listing text/screenshots
-    *   Apply for Pinterest API access (Administrative task)
 
 ### 🤝 The "Contract" (Crucial for Success)
 
@@ -247,18 +248,17 @@ If you're using an AI coding assistant to help implement this project, here's ho
 3. After opening new tab → Verify your page loads (even if basic)
 4. After noting extension ID → Verify you saved it somewhere
 
-### Phase 3: Pinterest Authentication
+### Phase 3: Session Management
 **STOP POINTS:**
-1. After updating redirect URI → Verify it matches extension ID exactly
-2. After creating auth module → Verify no syntax errors
-3. After testing OAuth flow → Verify you can log in successfully
-4. After checking storage → Verify tokens are saved
+1. After updating manifest → Verify permissions are correct
+2. After creating session manager → Verify it detects if you are logged in
+3. After testing login flow → Verify clicking "Connect" opens Pinterest
 
-### Phase 4: Board Selection & Data Fetching
+### Phase 4: Data Scraping
 **STOP POINTS:**
-1. After creating API client → Verify no syntax errors
-2. After fetching boards → Verify boards appear in settings
-3. After selecting boards → Verify selection persists
+1. After creating scraper → Verify you can fetch raw HTML
+2. After parsing logic → Verify you can extract the JSON blob
+3. After fetching boards → Verify boards appear in settings
 4. After fetching pins → Verify pins are returned (check console)
 
 ### Phase 5: Display & UI
@@ -330,8 +330,8 @@ If you're using an AI coding assistant to help implement this project, here's ho
 
 ### You'll Learn:
 - 🎓 Chrome Extension development (Manifest V3)
-- 🎓 OAuth 2.0 authentication flow
-- 🎓 Pinterest API integration
+- 🎓 Session-based authentication
+- 🎓 DOM Parsing & Web Scraping
 - 🎓 Browser storage management
 - 🎓 Responsive CSS layouts
 - 🎓 Error handling patterns
@@ -343,7 +343,7 @@ If you're using an AI coding assistant to help implement this project, here's ho
 By the end of this project, you should have:
 
 - ✅ A working Chrome/Brave extension
-- ✅ Successful Pinterest authentication
+- ✅ Seamless integration with your Pinterest session
 - ✅ Access to your private boards
 - ✅ Beautiful pin display on new tabs
 - ✅ Customizable settings

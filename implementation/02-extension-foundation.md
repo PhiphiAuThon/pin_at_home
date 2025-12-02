@@ -19,11 +19,11 @@ The manifest file is the heart of your Chrome extension. It defines permissions,
   "description": "Display random pins from your private Pinterest boards on every new tab",
   "permissions": [
     "storage",
-    "identity"
+    "cookies"
   ],
   "host_permissions": [
-    "https://api.pinterest.com/*",
-    "https://www.pinterest.com/*"
+    "https://www.pinterest.com/*",
+    "https://*.pinterest.com/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -55,8 +55,8 @@ The manifest file is the heart of your Chrome extension. It defines permissions,
 - **manifest_version: 3** - Latest version (required for new extensions)
 - **permissions**: 
   - `storage` - Save user preferences and cached data
-  - `identity` - For OAuth authentication
-- **host_permissions** - Access to Pinterest API and website
+  - `cookies` - Check login status
+- **host_permissions** - Access to Pinterest website (for scraping)
 - **chrome_url_overrides.newtab** - Replace new tab page
 - **action.default_popup** - Settings accessible from toolbar icon
 
@@ -94,11 +94,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('Message received:', request);
   
   switch (request.action) {
-    case 'authenticate':
-      handleAuthentication()
-        .then(result => sendResponse({ success: true, data: result }))
+    case 'checkSession':
+      checkSession()
+        .then(isValid => sendResponse({ success: true, isAuthenticated: isValid }))
         .catch(error => sendResponse({ success: false, error: error.message }));
-      return true; // Keep channel open for async response
+      return true;
       
     case 'fetchBoards':
       fetchUserBoards()
@@ -112,21 +112,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         .catch(error => sendResponse({ success: false, error: error.message }));
       return true;
       
-    case 'refreshToken':
-      refreshAccessToken()
-        .then(token => sendResponse({ success: true, data: token }))
-        .catch(error => sendResponse({ success: false, error: error.message }));
-      return true;
-      
     default:
       sendResponse({ success: false, error: 'Unknown action' });
   }
 });
 
 // Placeholder functions (will be implemented in later phases)
-async function handleAuthentication() {
-  // Will implement OAuth flow in Phase 3
-  throw new Error('Not implemented yet');
+async function checkSession() {
+  // Will implement in Phase 3
+  // Checks if user has valid Pinterest cookies
+  return false;
 }
 
 async function fetchUserBoards() {
@@ -139,22 +134,17 @@ async function fetchRandomPins(boardIds, count) {
   throw new Error('Not implemented yet');
 }
 
-async function refreshAccessToken() {
-  // Will implement in Phase 3
-  throw new Error('Not implemented yet');
-}
-
-// Alarm listener for periodic token refresh
+// Alarm listener for periodic updates
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === 'tokenRefresh') {
-    console.log('Refreshing access token...');
-    refreshAccessToken().catch(console.error);
+  if (alarm.name === 'refreshContent') {
+    console.log('Refreshing content...');
+    // We might want to pre-fetch pins here in the future
   }
 });
 
-// Set up token refresh alarm (check every 24 hours)
-chrome.alarms.create('tokenRefresh', {
-  periodInMinutes: 1440 // 24 hours
+// Set up refresh alarm
+chrome.alarms.create('refreshContent', {
+  periodInMinutes: 60 // 1 hour
 });
 
 console.log('Background service worker initialized');
@@ -164,7 +154,7 @@ console.log('Background service worker initialized');
 
 - **onInstalled** - Set default preferences on first install
 - **onMessage** - Handle requests from new tab page and settings
-- **Alarms** - Periodic token refresh to keep authentication valid
+- **Alarms** - Periodic updates
 - **Async/await** - Modern promise handling
 - **Error handling** - Proper error responses
 
@@ -188,51 +178,16 @@ const STORAGE_KEYS = {
 };
 
 // ============================================
-// Authentication Token Management
+// Session Management
 // ============================================
 
 /**
- * Save OAuth tokens to storage
- * @param {Object} tokens - { accessToken, refreshToken, expiresAt }
- */
-async function saveTokens(tokens) {
-  return chrome.storage.local.set({
-    [STORAGE_KEYS.AUTH_TOKENS]: {
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      expiresAt: tokens.expiresAt
-    }
-  });
-}
-
-/**
- * Get OAuth tokens from storage
- * @returns {Promise<Object|null>} Tokens or null if not found
- */
-async function getTokens() {
-  const result = await chrome.storage.local.get(STORAGE_KEYS.AUTH_TOKENS);
-  return result[STORAGE_KEYS.AUTH_TOKENS] || null;
-}
-
-/**
- * Check if access token is still valid
+ * Check if user is logged in (has cookies)
  * @returns {Promise<boolean>}
  */
-async function isTokenValid() {
-  const tokens = await getTokens();
-  if (!tokens || !tokens.expiresAt) return false;
-  
-  // Check if token expires in next 5 minutes
-  const now = Date.now();
-  const expiresAt = new Date(tokens.expiresAt).getTime();
-  return expiresAt > (now + 5 * 60 * 1000);
-}
-
-/**
- * Clear authentication tokens
- */
-async function clearTokens() {
-  return chrome.storage.local.remove(STORAGE_KEYS.AUTH_TOKENS);
+async function hasSession() {
+  // We'll implement this in Phase 3
+  return false;
 }
 
 // ============================================
@@ -365,10 +320,7 @@ async function clearAllCache() {
 // Make functions available globally for the extension
 if (typeof window !== 'undefined') {
   window.StorageUtils = {
-    saveTokens,
-    getTokens,
-    isTokenValid,
-    clearTokens,
+    hasSession,
     savePreferences,
     getPreferences,
     updatePreference,
