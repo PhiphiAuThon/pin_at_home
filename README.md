@@ -24,6 +24,7 @@ I personally set a Pinterest board as new tab page on my browser to get random i
     *   As soon as the page loads, the screen should turn dark.
     *   A "Finding Inspiration..." message might appear briefly.
     *   **BAM!** A clean grid of pins should fade in.
+    *   Next time you open the page, the overlay will be instantly visible.
 
 3.  **Controls**
     *   **Shuffle**: Click to pick a new set of random pins from the page.
@@ -37,4 +38,4 @@ I personally set a Pinterest board as new tab page on my browser to get random i
     *   *Fix coming:* The "Shuffle" button tries to scroll automatically for you.
 
 *   **"It doesn't load on my country's Pinterest (e.g., .fr, .de)"**
-    *   I added support for `.com`, `.fr`, `.de`, `.co.uk`, `.ca`, `.jp`. If you use another domain, let me know!
+    *   I added support for `.com`, `.fr`, `.de`, `.co.uk`, `.ca`, `.jp`. If you use another domain, add it into the **manifest.json** file!
