@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pinterest@Home Settings</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>⚙️ Pinterest@Home Settings</h1>
+    </header>
+
+    <!-- Connection Status -->
+    <section class="status-section">
+      <h2>Pinterest Connection</h2>
+      <div id="status-indicator" class="status-unknown">
+        <span id="status-text">Checking...</span>
+      </div>
+      <button id="connect-btn" class="btn-primary" style="display:none">
+        Connect Pinterest
+      </button>
+    </section>
+
+    <!-- Manual Board Input Section -->
+    <section class="board-input-section">
+      <h2>📌 Your Boards</h2>
+      
+      <div class="info-box">
+        <h3>How to add boards:</h3>
+        <ol>
+          <li>Go to <a href="https://www.pinterest.com" target="_blank">Pinterest.com</a></li>
+          <li>Navigate to your profile and find the boards you want</li>
+          <li>Copy the board URLs (e.g., <code>https://pinterest.com/username/board-name/</code>)</li>
+          <li>Paste them below (one per line)</li>
+        </ol>
+      </div>
+
+      <div class="input-group">
+        <label for="board-urls">Paste Board URLs:</label>
+        <textarea 
+          id="board-urls" 
+          placeholder="https://www.pinterest.com/username/travel-photos/&#10;https://www.pinterest.com/username/home-decor/&#10;https://www.pinterest.com/username/recipes/"
+          rows="6"
+        ></textarea>
+        <button id="add-boards-btn" class="btn-primary">Add Boards</button>
+      </div>
+
+      <div id="validation-feedback" class="feedback" style="display:none;"></div>
+    </section>
+
+    <!-- Saved Boards List -->
+    <section class="boards-section">
+      <h2>Saved Boards</h2>
+      <div id="boards-list" class="boards-grid">
+        <p class="empty-state">No boards added yet. Add some above!</p>
+      </div>
+    </section>
+
+    <!-- Preferences -->
+    <section class="preferences-section">
+      <h2>Preferences</h2>
+      
+      <div class="pref-item">
+        <label for="pins-per-page">Pins per page:</label>
+        <input type="number" id="pins-per-page" min="6" max="50" value="12">
+      </div>
+      
+      <div class="pref-item">
+        <label for="refresh-interval">Auto-refresh interval:</label>
+        <select id="refresh-interval">
+          <option value="0">Never</option>
+          <option value="15">15 minutes</option>
+          <option value="30">30 minutes</option>
+          <option value="60" selected>1 hour</option>
+          <option value="240">4 hours</option>
+        </select>
+      </div>
+      
+      <button id="save-prefs-btn" class="btn-primary">Save Preferences</button>
+    </section>
+
+    <footer>
+      <p>Made with ❤️ for Pinterest lovers</p>
+    </footer>
+  </div>
+
+  <script src="settings.js"></script>
+</body>
+</html>

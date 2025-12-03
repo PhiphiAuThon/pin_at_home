@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Debug Panel</title>
+  <style>
+    body {
+      font-family: monospace;
+      background: #1a1a1a;
+      color: #fff;
+      padding: 2rem;
+    }
+    .section {
+      background: #2a2a2a;
+      padding: 1rem;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+    }
+    button {
+      background: #e60023;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 0.5rem;
+    }
+    pre {
+      background: #0a0a0a;
+      padding: 1rem;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Pinterest Extension Debug Panel</h1>
+  
+  <div class="section">
+    <h2>Storage</h2>
+    <button onclick="viewStorage()">View All Storage</button>
+    <button onclick="clearAllStorage()">Clear All Storage</button>
+    <pre id="storageOutput"></pre>
+  </div>
+  
+  <div class="section">
+    <h2>Error Log</h2>
+    <button onclick="viewErrors()">View Errors</button>
+    <button onclick="clearErrors()">Clear Errors</button>
+    <pre id="errorOutput"></pre>
+  </div>
+  
+  <div class="section">
+    <h2>Analytics</h2>
+    <button onclick="viewAnalytics()">View Analytics</button>
+    <button onclick="clearAnalytics()">Clear Analytics</button>
+    <pre id="analyticsOutput"></pre>
+  </div>
+  
+  <script src="debug-panel.js"></script>
+</body>
+</html>
