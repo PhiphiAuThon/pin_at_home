@@ -21,8 +21,31 @@
 #pin_at_home-header {
   position: fixed;
   top: 20px;
+  left: 20px;
   right: 20px;
   z-index: 2147483648;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+/* Board Title */
+.pin_at_home-board-title {
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: capitalize;
+}
+
+/* Button Container */
+.pin_at_home-buttons {
   display: flex;
   gap: 10px;
 }

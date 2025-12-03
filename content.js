@@ -21,11 +21,42 @@ let state = {
   overlay: null,
   grid: null,
   loading: null,
-  cacheKey: ''
+  cacheKey: '',
+  boardName: ''
 };
 
-// Run immediately
-init();
+// Check if we're on a board page before running
+if (isBoardPage()) {
+  init();
+} else {
+  console.log('🧘 Pin@Home: Not a board page, skipping initialization');
+}
+
+// Validate that we're on a board page
+function isBoardPage() {
+  const path = window.location.pathname;
+  // Board URLs follow pattern: /{username}/{board-name}/
+  // Must have at least 2 path segments (excluding empty strings from leading/trailing slashes)
+  const segments = path.split('/').filter(s => s.length > 0);
+  
+  // Board pages have exactly 2 segments: username and board name
+  // Exclude known non-board patterns
+  const nonBoardPatterns = [
+    'search', 'pin', 'ideas', 'today', 'explore', 
+    'settings', 'resource', '_', 'business'
+  ];
+  
+  if (segments.length === 2) {
+    // Check if first segment is not a known non-board pattern
+    const isValid = !nonBoardPatterns.includes(segments[0].toLowerCase());
+    if (isValid) {
+      console.log(`🧘 Pin@Home: Valid board page detected: ${segments[0]}/${segments[1]}`);
+    }
+    return isValid;
+  }
+  
+  return false;
+}
 
 // Initialize
 function init() {
@@ -34,6 +65,14 @@ function init() {
   // Generate cache key based on URL (username + board)
   const path = window.location.pathname.replace(/\/$/, ''); // Remove trailing slash
   state.cacheKey = CONFIG.CACHE_KEY_PREFIX + path;
+  
+  // Extract board name for display
+  const segments = path.split('/').filter(s => s.length > 0);
+  if (segments.length >= 2) {
+    state.boardName = decodeURIComponent(segments[1].replace(/-/g, ' '));
+  }
+  
+  console.log(`🧘 Pin@Home: Cache key: ${state.cacheKey}`);
   
   // 1. Start loading cache immediately (async)
   const cachePromise = loadFromCache();
@@ -94,7 +133,12 @@ async function loadFromCache() {
       return true;
     }
   } catch (e) {
-    console.warn('Pin@Home: Cache load failed', e);
+    if (isContextInvalidated(e)) {
+      console.warn('Pin@Home: Extension reloaded. Please refresh this page.');
+      showReloadNotification();
+    } else {
+      console.warn('Pin@Home: Cache load failed', e);
+    }
   }
   return false;
 }
@@ -122,8 +166,56 @@ async function saveToCache(newPins) {
     state.pinsFound = trimmed;
     
   } catch (e) {
-    console.warn('Pin@Home: Cache save failed', e);
+    if (isContextInvalidated(e)) {
+      console.warn('Pin@Home: Extension reloaded. Cache not saved. Please refresh this page.');
+      // Don't show notification repeatedly during scanning
+    } else {
+      console.warn('Pin@Home: Cache save failed', e);
+    }
   }
+}
+
+// Check if error is due to extension context invalidation
+function isContextInvalidated(error) {
+  return error && (
+    error.message?.includes('Extension context invalidated') ||
+    error.message?.includes('Cannot access') ||
+    chrome.runtime?.id === undefined
+  );
+}
+
+// Show notification to reload page when extension context is invalidated
+function showReloadNotification() {
+  // Only show once
+  if (document.getElementById('pin_at_home-reload-notice')) return;
+  
+  const notice = document.createElement('div');
+  notice.id = 'pin_at_home-reload-notice';
+  notice.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(230, 0, 35, 0.95);
+    color: white;
+    padding: 20px 30px;
+    border-radius: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    z-index: 2147483647;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    text-align: center;
+  `;
+  notice.innerHTML = `
+    <div style="margin-bottom: 10px;">🔄 Extension was reloaded</div>
+    <div style="font-size: 14px; opacity: 0.9;">Please refresh this page to continue</div>
+  `;
+  
+  document.body.appendChild(notice);
+  
+  // Auto-remove after 5 seconds
+  setTimeout(() => notice.remove(), 5000);
 }
 
 // Scroll down a few times to load more pins
@@ -149,18 +241,36 @@ function createOverlay() {
   const header = document.createElement('div');
   header.id = 'pin_at_home-header';
   
+  // Board name display
+  const boardTitle = document.createElement('div');
+  boardTitle.className = 'pin_at_home-board-title';
+  boardTitle.textContent = state.boardName || 'Board';
+  
+  // Button container
+  const buttonContainer = document.createElement('div');
+  buttonContainer.className = 'pin_at_home-buttons';
+  
   const refreshBtn = document.createElement('button');
   refreshBtn.className = 'pin_at_home-btn';
   refreshBtn.textContent = '🔄 Shuffle';
   refreshBtn.onclick = shufflePins;
+  
+  const clearCacheBtn = document.createElement('button');
+  clearCacheBtn.className = 'pin_at_home-btn';
+  clearCacheBtn.textContent = '🧹 Clear Cache';
+  clearCacheBtn.onclick = clearCurrentBoardCache;
   
   const exitBtn = document.createElement('button');
   exitBtn.className = 'pin_at_home-btn exit';
   exitBtn.textContent = 'Exit Pin@Home';
   exitBtn.onclick = exitPinAtHome;
   
-  header.appendChild(refreshBtn);
-  header.appendChild(exitBtn);
+  buttonContainer.appendChild(refreshBtn);
+  buttonContainer.appendChild(clearCacheBtn);
+  buttonContainer.appendChild(exitBtn);
+  
+  header.appendChild(boardTitle);
+  header.appendChild(buttonContainer);
   
   // Grid container
   const grid = document.createElement('div');
@@ -310,6 +420,74 @@ function shufflePins() {
   renderPins();
   
   console.log('🔄 Shuffled! Using pool of', state.pinsFound.length, 'pins');
+}
+
+// Clear cache for current board
+async function clearCurrentBoardCache() {
+  const confirmed = confirm(`Clear cached images for "${state.boardName}"?\n\nThis will remove all cached images for this board and reload fresh content.`);
+  
+  if (!confirmed) return;
+  
+  try {
+    // Remove current board's cache
+    await chrome.storage.local.remove([state.cacheKey]);
+    console.log(`🧹 Cleared cache for: ${state.cacheKey}`);
+    
+    // Clear current state
+    state.pinsFound = [];
+    state.scanAttempts = 0;
+    
+    // Show loading and restart scanning
+    if (state.loading) state.loading.style.display = 'block';
+    if (state.grid) state.grid.innerHTML = '';
+    
+    // Restart scanning
+    autoScroll();
+    startScanning();
+    
+    console.log('✨ Cache cleared! Rescanning for fresh pins...');
+  } catch (e) {
+    if (isContextInvalidated(e)) {
+      alert('Extension was reloaded. Please refresh this page and try again.');
+    } else {
+      console.error('Pin@Home: Failed to clear cache', e);
+      alert('Failed to clear cache. Check console for details.');
+    }
+  }
+}
+
+// Clear ALL Pin@Home caches (for deep cleaning)
+async function clearAllCache() {
+  const confirmed = confirm('Clear ALL Pin@Home caches?\n\nThis will remove cached images from ALL boards. This action cannot be undone.');
+  
+  if (!confirmed) return;
+  
+  try {
+    // Get all storage keys
+    const allData = await chrome.storage.local.get(null);
+    const pinAtHomeKeys = Object.keys(allData).filter(key => key.startsWith(CONFIG.CACHE_KEY_PREFIX));
+    
+    if (pinAtHomeKeys.length === 0) {
+      alert('No caches found to clear.');
+      return;
+    }
+    
+    // Remove all Pin@Home caches
+    await chrome.storage.local.remove(pinAtHomeKeys);
+    console.log(`🧹 Cleared ${pinAtHomeKeys.length} cache(s):`, pinAtHomeKeys);
+    
+    alert(`Successfully cleared ${pinAtHomeKeys.length} board cache(s).`);
+    
+    // Reload current board
+    clearCurrentBoardCache();
+  } catch (e) {
+    if (isContextInvalidated(e)) {
+      alert('Extension was reloaded. Please refresh this page and try again.');
+    } else {
+      console.error('Pin@Home: Failed to clear all caches', e);
+      alert('Failed to clear caches. Check console for details.');
+    }
+  }
 }
 
 function exitPinAtHome() {
