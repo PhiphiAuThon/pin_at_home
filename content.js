@@ -1,7 +1,7 @@
-// Zen Mode Content Script
+// Pin@Home Content Script
 // Runs on Pinterest board pages
 
-console.log('🧘 Zen Mode: Initializing...');
+console.log('🧘 Pin@Home: Initializing...');
 
 // Configuration
 const CONFIG = {
@@ -9,7 +9,7 @@ const CONFIG = {
   SCAN_INTERVAL: 500,
   MAX_SCAN_ATTEMPTS: 30,
   MIN_POOL_SIZE: 40,
-  CACHE_KEY_PREFIX: 'zen_cache_',
+  CACHE_KEY_PREFIX: 'pin_at_home_cache_',
   MAX_CACHE_SIZE: 200 // Keep last 200 pins
 };
 
@@ -29,7 +29,7 @@ init();
 
 // Initialize
 function init() {
-  console.log('🧘 Zen Mode: Starting...');
+  console.log('🧘 Pin@Home: Starting...');
   
   // Generate cache key based on URL (username + board)
   const path = window.location.pathname.replace(/\/$/, ''); // Remove trailing slash
@@ -94,7 +94,7 @@ async function loadFromCache() {
       return true;
     }
   } catch (e) {
-    console.warn('Zen Mode: Cache load failed', e);
+    console.warn('Pin@Home: Cache load failed', e);
   }
   return false;
 }
@@ -122,7 +122,7 @@ async function saveToCache(newPins) {
     state.pinsFound = trimmed;
     
   } catch (e) {
-    console.warn('Zen Mode: Cache save failed', e);
+    console.warn('Pin@Home: Cache save failed', e);
   }
 }
 
@@ -143,32 +143,32 @@ function createOverlay() {
   // ... (UI creation code remains same) ...
   // Create container
   const overlay = document.createElement('div');
-  overlay.id = 'zen-mode-overlay';
+  overlay.id = 'pin_at_home-overlay';
   
   // Header with controls
   const header = document.createElement('div');
-  header.id = 'zen-mode-header';
+  header.id = 'pin_at_home-header';
   
   const refreshBtn = document.createElement('button');
-  refreshBtn.className = 'zen-btn';
+  refreshBtn.className = 'pin_at_home-btn';
   refreshBtn.textContent = '🔄 Shuffle';
   refreshBtn.onclick = shufflePins;
   
   const exitBtn = document.createElement('button');
-  exitBtn.className = 'zen-btn exit';
-  exitBtn.textContent = 'Exit Zen Mode';
-  exitBtn.onclick = exitZenMode;
+  exitBtn.className = 'pin_at_home-btn exit';
+  exitBtn.textContent = 'Exit Pin@Home';
+  exitBtn.onclick = exitPinAtHome;
   
   header.appendChild(refreshBtn);
   header.appendChild(exitBtn);
   
   // Grid container
   const grid = document.createElement('div');
-  grid.id = 'zen-grid';
+  grid.id = 'pin_at_home-grid';
   
   // Loading indicator
   const loading = document.createElement('div');
-  loading.id = 'zen-loading';
+  loading.id = 'pin_at_home-loading';
   loading.textContent = 'Finding Inspiration...';
   
   // Assemble
@@ -211,7 +211,7 @@ function startScanning() {
     // Deduplicate
     const uniqueUrls = [...new Set(urls)];
     
-    console.log(`🧘 Zen Mode: Found ${uniqueUrls.length} potential pins`);
+    console.log(`🧘 Pin@Home: Found ${uniqueUrls.length} potential pins`);
     
     // If we found new pins, update cache
     if (uniqueUrls.length > 0) {
@@ -288,7 +288,7 @@ function renderPins() {
   // Render each image
   imagesToRender.forEach((url, index) => {
     const pin = document.createElement('div');
-    pin.className = 'zen-pin';
+    pin.className = 'pin_at_home-pin';
     pin.style.animationDelay = `${index * 0.03}s`; // Stagger animation
     
     const img = document.createElement('img');
@@ -312,7 +312,7 @@ function shufflePins() {
   console.log('🔄 Shuffled! Using pool of', state.pinsFound.length, 'pins');
 }
 
-function exitZenMode() {
+function exitPinAtHome() {
   if (state.overlay) {
     // Smooth fade out
     state.overlay.style.transition = 'opacity 0.3s ease-out';
@@ -324,5 +324,3 @@ function exitZenMode() {
   }
   state.isActive = false;
 }
-
-// Old startup logic removed (init called at top)
