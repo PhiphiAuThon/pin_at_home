@@ -1,4 +1,4 @@
-# PIN @ HOME
+# Pin@Home
 
 Pinterest overlay for displaying random pins from a board.
 I personally set a Pinterest board as new tab page on my browser to get random inspiration.
