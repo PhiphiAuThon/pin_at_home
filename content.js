@@ -86,7 +86,7 @@ function injectOverlayWhenReady() {
 // Load pins from local storage
 async function loadFromCache() {
   try {
-    const result = await chrome.storage.local.get(state.cacheKey);
+    const result = await chrome.storage.local.get([state.cacheKey]);
     const cachedPins = result[state.cacheKey];
     
     if (cachedPins && Array.isArray(cachedPins) && cachedPins.length > 0) {
@@ -103,7 +103,7 @@ async function loadFromCache() {
 async function saveToCache(newPins) {
   try {
     // Get current cache
-    const result = await chrome.storage.local.get(state.cacheKey);
+    const result = await chrome.storage.local.get([state.cacheKey]);
     let currentCache = result[state.cacheKey] || [];
     
     // Merge: New pins go to front
