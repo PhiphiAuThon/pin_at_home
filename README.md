@@ -1,4 +1,8 @@
-# Zen Mode (V2) - Testing Guide
+# PIN AT HOME - Testing Guide
+
+Pinterest overlay for displaying random pins from a board.
+I personally set a Pinterest board as new tab page on my browser to get random inspiration.
+
 
 ## 🚀 Setup
 
@@ -6,7 +10,7 @@
     *   Go to `brave://extensions/` (or `chrome://extensions/`)
 
 2.  **Load the New Extension**
-    *   If you have the old "Pinterest@Home" extension loaded, **remove it** or disable it.
+    *   If you have the old "Pin@Home" extension loaded, **remove it** or disable it.
     *   Click **"Load unpacked"**.
     *   Select the **`zen_mode_v2`** folder inside your project directory (`Documents/dev/pint_at_home/zen_mode_v2`).
 
