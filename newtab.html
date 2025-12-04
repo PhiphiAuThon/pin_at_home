@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pin@Home</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* New tab specific styles - force overlay on top of everything */
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #111;
+      overflow: hidden;
+      height: 100%;
+      width: 100%;
+    }
+    /* Override to ensure max coverage */
+    #pin_at_home-overlay {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 2147483647 !important;
+    }
+  </style>
+</head>
+<body>
+  <div id="pin_at_home-overlay">
+    <div id="pin_at_home-grid"></div>
+    <div id="pin_at_home-loading">Loading boards...</div>
+  </div>
+  <script type="module" src="src/newtab.js"></script>
+</body>
+</html>

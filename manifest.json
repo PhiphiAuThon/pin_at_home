@@ -15,6 +15,9 @@
     "https://www.pinterest.de/*",
     "https://www.pinterest.jp/*"
   ],
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  },
   "content_scripts": [
     {
       "matches": [
@@ -25,9 +28,15 @@
         "https://www.pinterest.de/*",
         "https://www.pinterest.jp/*"
       ],
-      "js": ["content.js"],
+      "js": ["src/loader.js"],
       "css": ["styles.css"],
       "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["src/*.js", "styles.css"],
+      "matches": ["<all_urls>"]
     }
   ],
   "icons": {

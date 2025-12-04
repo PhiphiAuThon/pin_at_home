@@ -1,5 +1,47 @@
 /* Zen Mode Styles */
 
+/* Scanner Indicator - Discreet pill at top of Pinterest */
+#pin_at_home-indicator {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  color: white;
+  padding: 10px 18px;
+  border-radius: 25px;
+  font-size: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+#pin_at_home-indicator .indicator-icon {
+  font-size: 16px;
+}
+
+#pin_at_home-indicator .indicator-text {
+  font-weight: 500;
+}
+
+#pin_at_home-indicator.done {
+  background: rgba(34, 139, 34, 0.9);
+}
+
+#pin_at_home-indicator.error {
+  background: rgba(220, 53, 69, 0.9);
+}
+
+#pin_at_home-indicator.clickable:hover {
+  background: rgba(45, 85, 255, 0.9);
+  transform: translateX(-50%) scale(1.05);
+}
+
 /* The Overlay Curtain */
 #pin_at_home-overlay {
   position: fixed;
@@ -20,36 +62,108 @@
 /* Header / Controls */
 #pin_at_home-header {
   position: fixed;
-  top: 20px;
+  bottom: 20px;
   left: 20px;
   right: 20px;
   z-index: 2147483648;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end; /* Align to right */
   align-items: center;
   gap: 20px;
 }
 
-/* Board Title */
-.pin_at_home-board-title {
+/* Left section: Board title + Browse button */
+.pin_at_home-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Board Menu Container - Expandable on Hover */
+.pin_at_home-board-menu {
+  position: relative;
+  display: flex;
+  flex-direction: column; /* Vertical stack */
+  align-items: stretch; /* Stretch items to full width */
   background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 15px; /* Slightly less rounded for dropdown feel */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  min-width: 160px; /* Minimum width for the menu */
+}
+
+.pin_at_home-board-menu:hover {
+  background: rgba(0, 0, 0, 0.85);
+}
+
+/* Board Title */
+.pin_at_home-board-title {
   color: white;
   padding: 10px 20px;
-  border-radius: 20px;
   font-size: 16px;
   font-weight: 600;
   letter-spacing: 0.5px;
   text-transform: capitalize;
-}
-
-/* Button Container */
-.pin_at_home-buttons {
+  white-space: nowrap;
   display: flex;
-  gap: 10px;
+  align-items: center;
+  gap: 8px;
 }
 
+/* Expand indicator */
+.pin_at_home-board-title::after {
+  content: '▾';
+  font-size: 20px; /* Larger arrow */
+  opacity: 0.8;
+  transition: transform 0.3s ease;
+  margin-left: auto; /* Push to right */
+}
+
+.pin_at_home-board-menu:hover .pin_at_home-board-title::after {
+  transform: rotate(180deg);
+}
+
+/* Menu Items Container - Hidden by Default */
+.pin_at_home-menu-items {
+  display: flex;
+  flex-direction: column; /* Vertical stack */
+  align-items: stretch;
+  gap: 4px;
+  max-height: 0; /* Animate height instead of width */
+  opacity: 0;
+  padding: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.pin_at_home-board-menu:hover .pin_at_home-menu-items {
+  max-height: 300px; /* Enough height for items */
+  opacity: 1;
+  padding: 0 8px 8px 8px; /* Padding at bottom */
+}
+
+/* Divider between title and menu items */
+.pin_at_home-menu-divider {
+  width: 100%;
+  height: 1px; /* Horizontal line */
+  background: rgba(255, 255, 255, 0.2);
+  margin: 4px 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.pin_at_home-board-menu:hover .pin_at_home-menu-divider {
+  opacity: 1;
+}
+
+/* Button Container (for browse button - outside menu) - REMOVED */
+.pin_at_home-buttons {
+  display: none;
+}
+
+/* Base Button Styles */
 .pin_at_home-btn {
   background: rgba(0, 0, 0, 0.75); /* Dark semi-transparent background */
   backdrop-filter: blur(10px);
@@ -68,6 +182,52 @@
   transform: translateY(-1px);
 }
 
+/* Menu Item Buttons - Smaller, fits in menu */
+.pin_at_home-menu-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 15px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  text-align: left; /* Align text left */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pin_at_home-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.02);
+}
+
+.pin_at_home-menu-btn.exit {
+  background: rgba(230, 0, 35, 0.8); /* Pinterest Red */
+}
+
+.pin_at_home-menu-btn.exit:hover {
+  background: rgba(230, 0, 35, 1);
+}
+
+.pin_at_home-menu-btn.browse {
+  background: rgba(45, 85, 255, 0.8);
+}
+
+.pin_at_home-menu-btn.browse:hover {
+  background: rgba(45, 85, 255, 1);
+}
+
+.pin_at_home-menu-btn.browse.active {
+  background: rgba(255, 180, 0, 0.9);
+  color: #111;
+}
+
 .pin_at_home-btn.exit {
   background: rgba(230, 0, 35, 0.8); /* Pinterest Red */
   border-color: transparent;
@@ -79,33 +239,63 @@
 
 /* The Grid - CSS Grid Layout for Perfect Collage */
 #pin_at_home-grid {
-  display: grid;
-  grid-template-rows: repeat(2, 50vh); /* 2 rows by default, each 50% of viewport */
-  grid-auto-flow: column; /* Fill columns automatically */
-  grid-auto-columns: minmax(0, 1fr); /* Columns adjust to fit content */
-  gap: 0; /* Zero spacing between images */
+  display: flex; /* Changed from grid to flex for columns */
   width: 100vw;
   height: 100vh;
   margin: 0;
   padding: 0;
-  overflow: hidden; /* No scrolling */
+  overflow: hidden;
   position: absolute;
   top: 0;
   left: 0;
+  background: #111;
 }
 
-/* Pin Cards - Grid items */
+/* Column Container */
+.pin-column {
+  flex: 1;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  border-right: 1px solid #000; /* Subtle separator */
+  /* Fade-in animation */
+  opacity: 0;
+  animation: fadeInColumn 2.0s ease forwards;
+}
+
+@keyframes fadeInColumn {
+  to { opacity: 1; }
+}
+
+.pin-column:last-child {
+  border-right: none;
+}
+
+/* Scrolling Track */
+.pin-track {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  will-change: transform;
+  backface-visibility: hidden; /* Performance: Promote to own layer */
+  transform: translateZ(0); /* Performance: Hardware acceleration */
+}
+
+/* Animation Classes - REMOVED for JS Virtual Scroll */
+
+/* Pause on Hover handled by JS */
+
+/* Pin Cards - Modified for columns */
 .pin_at_home-pin {
   position: relative;
-  background: transparent;
+  background: #1a1a1a; /* Dark placeholder while image loads */
   cursor: pointer;
-  opacity: 0;
-  animation: fadeIn 0.6s ease forwards;
-  overflow: hidden; /* Ensure no overflow from images */
-  
-  /* Fill the grid cell completely */
   width: 100%;
-  height: 100%;
+  /* Height set via JS with dynamic transition based on scroll speed */
+  display: block;
+  padding: 0;
+  margin: 0;
+  overflow: hidden; /* Clip image during hover scale */
 }
 
 .pin_at_home-pin:hover {
@@ -114,12 +304,16 @@
 
 .pin_at_home-pin img {
   width: 100%;
-  height: 100%;
-  object-fit: cover; /* FILL CONTAINER - CROP TO FIT */
+  height: auto; /* Let image maintain aspect ratio */
+  object-fit: contain; /* Show full image, no cropping */
   display: block; /* Remove any inline spacing */
   
-  /* Subtle shadow and interaction */
-  transition: transform 0.3s ease, filter 0.3s ease;
+  /* Instant reveal - no transition for performance */
+  opacity: 1;
+}
+
+.pin_at_home-pin img.loaded {
+  opacity: 1;
 }
 
 .pin_at_home-pin:hover img {
@@ -150,3 +344,425 @@
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* Fullscreen Image Viewer */
+#pin_at_home-fullscreen-viewer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 2147483648; /* Above the main overlay */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  cursor: pointer;
+}
+
+#pin_at_home-fullscreen-viewer.active {
+  opacity: 1;
+}
+
+.pin_at_home-fullscreen-container {
+  max-width: 95vw;
+  max-height: 95vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.pin_at_home-fullscreen-image {
+  max-width: 100%;
+  max-height: 95vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+  cursor: zoom-in;
+  transform: scale(0.9);
+  transition: transform 0.2s ease;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+#pin_at_home-fullscreen-viewer.active .pin_at_home-fullscreen-image {
+  transform: scale(1);
+}
+
+.pin_at_home-fullscreen-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  color: white;
+  font-size: 28px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.2s ease;
+  line-height: 1;
+  z-index: 10;
+}
+
+.pin_at_home-fullscreen-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+/* Zoom hint */
+.pin_at_home-zoom-hint {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  padding: 10px 20px;
+  border-radius: 20px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+#pin_at_home-fullscreen-viewer:not(.active) .pin_at_home-zoom-hint {
+  opacity: 0;
+}
+
+/* ========================================
+   BROWSE MODE / REFSHEET STYLES
+   ======================================== */
+
+/* Browse All Button */
+.pin_at_home-btn.browse {
+  background: rgba(45, 85, 255, 0.8);
+  border-color: transparent;
+}
+
+.pin_at_home-btn.browse:hover {
+  background: rgba(45, 85, 255, 1);
+}
+
+.pin_at_home-btn.browse.active {
+  background: rgba(255, 180, 0, 0.9);
+  color: #111;
+}
+
+/* Browse Gallery Container - REMOVED, using main grid instead */
+
+/* When sidepanel is active, shrink the main grid with smooth transition */
+#pin_at_home-grid {
+  transition: width 0.3s ease;
+}
+
+#pin_at_home-grid.browse-active {
+  width: calc(100vw - 200px); /* Leave space for sidepanel */
+}
+
+/* Browse Item - selection mode styling (adds to existing .pin_at_home-pin) */
+.pin_at_home-browse-item {
+  position: relative;
+  cursor: pointer;
+}
+
+.pin_at_home-browse-item:hover {
+  z-index: 5;
+}
+
+/* Selected State - only show border on hover */
+.pin_at_home-browse-item.selected:hover {
+  box-shadow: 0 0 0 4px rgba(45, 85, 255, 1);
+}
+
+/* Selection Order Number - centered circle */
+.pin_at_home-browse-item .selection-order {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 50px;
+  height: 50px;
+  background: rgba(45, 85, 255, 0.9);
+  border-radius: 50%;
+  color: white;
+  font-size: 24px;
+  font-weight: 700;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.pin_at_home-browse-item.selected .selection-order {
+  display: flex;
+}
+
+/* ========================================
+   SIDEPANEL STYLES
+   ======================================== */
+
+#pin_at_home-sidepanel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 200px;
+  bottom: 0;
+  background: rgba(20, 20, 20, 0.98);
+  backdrop-filter: blur(20px);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 2147483647;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%); /* Start off-screen to the right */
+  transition: transform 0.3s ease;
+}
+
+#pin_at_home-sidepanel.active {
+  transform: translateX(0); /* Slide in */
+}
+
+.pin_at_home-sidepanel-header {
+  padding: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.pin_at_home-sidepanel-title {
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.pin_at_home-sidepanel-count {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+}
+
+.pin_at_home-sidepanel-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 24px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.2s ease;
+  line-height: 1;
+  padding: 0;
+}
+
+.pin_at_home-sidepanel-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.pin_at_home-sidepanel-gallery {
+  flex: 1;
+  column-count: 2;
+  column-gap: 4px;
+  padding: 6px;
+  overflow-y: auto;
+}
+
+.pin_at_home-sidepanel-item {
+  position: relative;
+  break-inside: avoid;
+  margin-bottom: 4px;
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.pin_at_home-sidepanel-item:hover {
+  opacity: 0.8;
+}
+
+.pin_at_home-sidepanel-item img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.pin_at_home-sidepanel-item .remove-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 36px;
+  height: 36px;
+  background: rgba(230, 0, 35, 0.9);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.pin_at_home-sidepanel-item:hover .remove-btn {
+  opacity: 1;
+}
+
+.pin_at_home-sidepanel-actions {
+  padding: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pin_at_home-sidepanel-btn {
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pin_at_home-sidepanel-btn.create {
+  background: linear-gradient(135deg, #2d55ff, #5b7cff);
+  color: white;
+}
+
+.pin_at_home-sidepanel-btn.create:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(45, 85, 255, 0.4);
+}
+
+.pin_at_home-sidepanel-btn.create:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.pin_at_home-sidepanel-btn.clear {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.pin_at_home-sidepanel-btn.clear:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+/* Empty State */
+.pin_at_home-sidepanel-empty {
+  column-span: all;
+  padding: 40px 20px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 14px;
+}
+
+/* ========================================
+   REFSHEET CANVAS STYLES
+   ======================================== */
+
+#pin_at_home-refsheet-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #0a0a0a;
+  z-index: 2147483648;
+  display: none;
+  overflow: hidden;
+}
+
+#pin_at_home-refsheet-canvas.active {
+  display: block;
+}
+
+.pin_at_home-refsheet-container {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  cursor: grab;
+  user-select: none;
+}
+
+.pin_at_home-refsheet-container:active {
+  cursor: grabbing;
+}
+
+.pin_at_home-refsheet-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  align-content: center;
+  gap: 8px;
+  padding: 60px;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.pin_at_home-refsheet-image {
+  max-height: calc(50vh - 50px);
+  max-width: calc(33vw - 20px);
+  width: auto;
+  height: auto;
+  border-radius: 6px;
+  object-fit: contain;
+}
+
+/* Refsheet Controls */
+.pin_at_home-refsheet-controls {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  padding: 12px 20px;
+  border-radius: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  z-index: 10;
+}
+
+.pin_at_home-refsheet-controls .pin_at_home-btn {
+  padding: 8px 20px;
+}
+
+/* Zoom indicator */
+.pin_at_home-zoom-level {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  margin-left: 5px;
+}
+
