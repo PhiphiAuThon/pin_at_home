@@ -62,15 +62,15 @@ This directory contains the ES6 module source code for the Pin@Home Chrome exten
 - Shows progress indicator
 - Only caches images for later viewing in new tab
 
-### 🚀 `early-init.js`
-**Purpose**: Fast startup for overlay mode
+### 🚀 `early-init.js` (Legacy)
+**Purpose**: Fast startup for overlay mode (Not used in current New Tab version)
 - Self-contained (no imports for speed)
 - Pre-loads cache while other modules load
 - Creates grid structure immediately
 - Exports: `cachePromise`, `earlyGrid`, etc.
 
-### 🎯 `main.js`
-**Purpose**: Main orchestration
+### 🎯 `main.js` (Legacy)
+**Purpose**: Main orchestration for overlay mode (Not used in current New Tab version)
 - Initializes the extension in overlay mode
 - Coordinates between modules
 - Manages application lifecycle
@@ -102,7 +102,7 @@ Fullscreen image viewing with navigation.
 Reference sheet creation from selected pins.
 
 ### `sidepanel.js`
-Side panel with board info and action buttons.
+Side panel with board info, action buttons, and "Shuffle Results" functionality.
 
 ### `selection.js`
 Pin selection handling for refsheet mode.

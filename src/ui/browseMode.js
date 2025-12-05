@@ -5,8 +5,8 @@ import { CONFIG } from '../config.js';
 import { state, updateState } from '../state.js';
 import { openFullscreenViewer } from './fullscreenViewer.js';
 import { toggleImageSelection, updateSelectionOrder } from './selection.js';
-import { createSidepanel, updateSidepanel, setExitBrowseModeRef } from './sidepanel.js';
-import { setScrollPaused, isManuallyPaused } from './grid.js';
+import { createSidepanel, updateSidepanel, setExitBrowseModeRef, setShuffleBrowseRef, setPinCountUpdateRef } from './sidepanel.js';
+import { setScrollPaused, isManuallyPaused, getPinCountLimit, setPinCountLimit } from './grid.js';
 
 /**
  * Toggle browse all mode on/off
@@ -54,6 +54,13 @@ function enterBrowseMode(browseBtn) {
   
   // Update sidepanel to show correct counts immediately
   updateSidepanel();
+  
+  // Set active state for pin count buttons in sidepanel
+  const limit = getPinCountLimit();
+  const countBtns = state.sidepanel.querySelectorAll('.pin_at_home-count-btn');
+  countBtns.forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.count === String(limit));
+  });
   
   // Show sidepanel with animation
   state.sidepanel.classList.add('active');
@@ -115,8 +122,43 @@ export function exitBrowseMode(browseBtn) {
   console.log('📋 Exited browse mode');
 }
 
-// Register exitBrowseMode with sidepanel to avoid circular import
+// Register callbacks with sidepanel to avoid circular import
 setExitBrowseModeRef(exitBrowseMode);
+setShuffleBrowseRef(shuffleBrowseGrid);
+setPinCountUpdateRef(updatePinCount);
+
+/**
+ * Update pin count limit and re-render
+ */
+function updatePinCount(count) {
+  setPinCountLimit(count);
+  renderBrowseGrid();
+  
+  // Update sidepanel count
+  const uniqueCount = hideDuplicates();
+  updateSidepanel(uniqueCount);
+  
+  console.log(`📋 Pin count updated to: ${count}`);
+}
+
+/**
+ * Shuffle the browse grid
+ */
+export function shuffleBrowseGrid() {
+  if (!state.pinsFound || state.pinsFound.length === 0) return;
+  
+  // Shuffle the pins array
+  state.pinsFound.sort(() => Math.random() - 0.5);
+  
+  // Re-render the grid
+  renderBrowseGrid();
+  
+  // Update sidepanel count
+  const uniqueCount = hideDuplicates();
+  updateSidepanel(uniqueCount);
+  
+  console.log('🔀 Shuffled browse grid');
+}
 
 /**
  * Switch existing grid items to selection mode (no re-render)
@@ -190,8 +232,15 @@ export function renderBrowseGrid() {
   state.grid.style.height = 'auto';
   state.grid.style.overflowY = 'auto';
   
-  // Render ALL unique pins (not shuffled)
-  state.pinsFound.forEach((url, index) => {
+  // Render pins respecting the limit
+  let pinsToRender = state.pinsFound;
+  const limit = getPinCountLimit();
+  
+  if (limit !== 'all') {
+    pinsToRender = pinsToRender.slice(0, parseInt(limit, 10));
+  }
+
+  pinsToRender.forEach((url, index) => {
     const pin = document.createElement('div');
     pin.className = 'pin_at_home-pin pin_at_home-browse-item';
     pin.dataset.url = url;

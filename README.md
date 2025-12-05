@@ -10,6 +10,7 @@ I personally set a Pinterest board as new tab page on my browser to get random i
 - **Browse Mode**: Scroll through your entire pin collection
 - **Fullscreen Viewer**: View pins in fullscreen with navigation
 - **Refsheet Canvas**: Create reference sheets from selected pins
+- **Sidepanel Shuffle**: Shuffle visible pins directly from the reference sheet sidepanel
 - **Multi-board Caching**: Pins are cached per board for instant loading
 
 ## 🚀 Setup
@@ -34,8 +35,6 @@ pin_at_home/
 │   ├── scanner.js           # Page scanning logic
 │   ├── scannerOnly.js       # Lightweight scanner for new tab
 │   ├── loader.js            # Module loader (content script entry)
-│   ├── early-init.js        # Early initialization (overlay injection)
-│   ├── main.js              # Main entry point
 │   ├── newtab.js            # New tab page logic
 │   ├── ui.js                # UI barrel export
 │   ├── ui/                  # UI components
@@ -66,18 +65,17 @@ pin_at_home/
 2.  **Go to Pinterest**
     *   Navigate to any Pinterest board URL (e.g., `https://www.pinterest.com/your-username/your-board/`).
 
-3.  **Watch the Magic**
-    *   As soon as the page loads, the screen should turn dark.
-    *   A "Finding Inspiration..." message might appear briefly.
-    *   **BAM!** A clean grid of pins should fade in.
-    *   Next time you open the page, the overlay will be instantly visible.
+3.  **Scan a Board**
+    *   Look for the "Scan this board?" indicator in the bottom right.
+    *   Click it to start scanning pins.
+    *   Wait for the scan to complete.
 
 4.  **Controls**
     *   **Shuffle**: Pick a new set of random pins from the page.
     *   **Browse**: Enter browse mode to scroll through all pins.
     *   **Refsheet**: Create a reference sheet from selected pins.
+    *   **Sidepanel Shuffle**: In the sidepanel, click "Shuffle Results" to randomize the visible pins.
     *   **Clear Cache**: Clear cached images for the current board.
-    *   **Exit**: Close the overlay and see the normal Pinterest page.
 
 ## 🐛 Troubleshooting
 

@@ -84,7 +84,7 @@ function createBrowseButton() {
   const btn = document.createElement('button');
   btn.id = 'pin_at_home-browse-btn';
   btn.className = 'pin_at_home-menu-btn browse';
-  btn.textContent = 'Browse All';
+  btn.textContent = 'Make Ref Sheet';
   btn.onclick = () => toggleBrowseMode(btn);
   return btn;
 }
