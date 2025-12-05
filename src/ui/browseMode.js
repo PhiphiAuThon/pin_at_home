@@ -5,7 +5,7 @@ import { CONFIG } from '../config.js';
 import { state, updateState } from '../state.js';
 import { openFullscreenViewer } from './fullscreenViewer.js';
 import { toggleImageSelection, updateSelectionOrder } from './selection.js';
-import { createSidepanel, updateSidepanel, setExitBrowseModeRef, setShuffleBrowseRef, setPinCountUpdateRef } from './sidepanel.js';
+import { createSidepanel, updateSidepanel, setExitBrowseModeRef } from './sidepanel.js';
 import { setScrollPaused, isManuallyPaused, getPinCountLimit, setPinCountLimit } from './grid.js';
 
 /**
@@ -124,8 +124,6 @@ export function exitBrowseMode(browseBtn) {
 
 // Register callbacks with sidepanel to avoid circular import
 setExitBrowseModeRef(exitBrowseMode);
-setShuffleBrowseRef(shuffleBrowseGrid);
-setPinCountUpdateRef(updatePinCount);
 
 /**
  * Update pin count limit and re-render
