@@ -84,7 +84,7 @@ export function createSidepanel() {
 /**
  * Update the sidepanel to show selected images
  */
-export function updateSidepanel() {
+export function updateSidepanel(totalCount = null) {
   if (!state.sidepanel) return;
   
   const gallery = state.sidepanel.querySelector('.pin_at_home-sidepanel-gallery');
@@ -121,7 +121,8 @@ export function updateSidepanel() {
     createBtn.disabled = false;
   }
   
-  count.textContent = `${state.selectedImages.length} selected / ${state.pinsFound.length} total`;
+  const total = totalCount !== null ? totalCount : state.pinsFound.length;
+  count.textContent = `${state.selectedImages.length} selected / ${total} visible`;
 }
 
 // Register callback to avoid circular import issues

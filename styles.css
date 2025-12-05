@@ -1159,3 +1159,46 @@
   margin-left: 5px;
 }
 
+/* ========================================
+   BROWSE MODE / REFSHEET STYLES
+   ======================================== */
+
+/* Browse Mode - Pause & Scroll Overrides */
+body.pin_at_home-browse-mode #pin_at_home-grid {
+  overflow-y: auto !important;
+  display: flex !important; /* Keep flex layout for columns */
+  scrollbar-width: none; /* Firefox */
+}
+
+body.pin_at_home-browse-mode #pin_at_home-grid::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+body.pin_at_home-browse-mode .pin-column {
+  overflow: visible !important;
+  height: auto !important;
+}
+
+body.pin_at_home-browse-mode .pin-track {
+  transform: none !important;
+  height: auto !important;
+}
+
+body.pin_at_home-browse-mode .pin_at_home-pin {
+  position: relative !important;
+  top: auto !important;
+  height: auto !important;
+  margin-bottom: 8px; /* Gap between pins */
+}
+
+/* Hide duplicates in browse mode */
+.hidden-duplicate {
+  display: none !important;
+  height: 0 !important;
+  width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  visibility: hidden !important;
+  border: none !important;
+}
+

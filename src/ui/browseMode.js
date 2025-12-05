@@ -58,8 +58,17 @@ function enterBrowseMode(browseBtn) {
   // Show sidepanel with animation
   state.sidepanel.classList.add('active');
   
+  // Add body class for CSS overrides
+  document.body.classList.add('pin_at_home-browse-mode');
+  
   // Auto-pause scrolling in browse mode
   setScrollPaused(true);
+  
+  // Hide duplicates
+  const uniqueCount = hideDuplicates();
+  
+  // Update sidepanel with correct count
+  updateSidepanel(uniqueCount);
   
   console.log('📋 Entered browse mode');
 }
@@ -92,10 +101,16 @@ export function exitBrowseMode(browseBtn) {
     state.sidepanel.classList.remove('active');
   }
   
+  // Remove body class
+  document.body.classList.remove('pin_at_home-browse-mode');
+
   // Resume scrolling if not manually paused
   if (!isManuallyPaused()) {
     setScrollPaused(false);
   }
+  
+  // Show duplicates again
+  showDuplicates();
   
   console.log('📋 Exited browse mode');
 }
@@ -206,4 +221,35 @@ export function renderBrowseGrid() {
   });
   
   console.log(`📋 Browse grid: ${state.pinsFound.length} unique pins`);
+}
+
+/**
+ * Hide duplicate pins (clones or repeated URLs)
+ * Keeps only the first visible instance of each URL
+ * @returns {number} The count of visible unique pins
+ */
+function hideDuplicates() {
+  const seenUrls = new Set();
+  const pins = state.grid.querySelectorAll('.pin_at_home-pin');
+  let visibleCount = 0;
+  
+  pins.forEach(pin => {
+    const url = pin.dataset.url;
+    if (seenUrls.has(url)) {
+      pin.classList.add('hidden-duplicate');
+    } else {
+      seenUrls.add(url);
+      visibleCount++;
+    }
+  });
+  
+  return visibleCount;
+}
+
+/**
+ * Show all pins (including duplicates)
+ */
+function showDuplicates() {
+  const hidden = state.grid.querySelectorAll('.hidden-duplicate');
+  hidden.forEach(pin => pin.classList.remove('hidden-duplicate'));
 }

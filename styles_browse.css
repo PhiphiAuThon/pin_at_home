@@ -1,0 +1,23 @@
+/* ========================================
+   BROWSE MODE / REFSHEET STYLES
+   ======================================== */
+
+/* Browse Mode - Pause & Scroll Overrides */
+body.pin_at_home-browse-mode #pin_at_home-grid {
+  overflow-y: auto !important;
+  display: block !important; /* Ensure block layout for scrolling */
+}
+
+body.pin_at_home-browse-mode .pin-column {
+  overflow: visible !important;
+  height: auto !important;
+}
+
+body.pin_at_home-browse-mode .pin-track {
+  transform: none !important;
+}
+
+/* Hide duplicates in browse mode */
+.hidden-duplicate {
+  display: none !important;
+}

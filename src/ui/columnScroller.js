@@ -37,6 +37,9 @@ export class ColumnScroller {
   get isStable() { return this.totalHeight >= window.innerHeight * 2; }
   
   handleWheel(e) {
+    // In browse mode, let the browser handle scrolling naturally
+    if (document.body.classList.contains('pin_at_home-browse-mode')) return;
+    
     e.preventDefault();
     this.scroll(-e.deltaY * 0.5);
   }
