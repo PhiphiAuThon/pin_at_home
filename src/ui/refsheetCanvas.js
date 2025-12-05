@@ -64,76 +64,112 @@ function createRefsheetCanvas() {
   canvas.appendChild(controls);
   document.body.appendChild(canvas);
   
-  // Setup zoom/pan - simple center-based zoom with bounded panning
+  // Setup zoom/pan - mouse-centered zoom with constrained panning (like solo view)
   let scale = 1;
-  let translateX = 0;
-  let translateY = 0;
   let isPanning = false;
-  let startX, startY, lastTranslateX, lastTranslateY;
+  let hasDragged = false;
+  let startX = 0, startY = 0;
+  let translateX = 0, translateY = 0;
+  let lastTranslateX = 0, lastTranslateY = 0;
   
   const applyTransform = () => {
-    grid.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
-    grid.style.transformOrigin = 'center center';
+    grid.style.transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
+    // Note: transform-origin is handled in CSS (center center)
     zoomLevel.textContent = `${Math.round(scale * 100)}%`;
+    
+    // Cursor updates
+    if (scale > 1) {
+      container.style.cursor = isPanning ? 'grabbing' : 'grab';
+    } else {
+      container.style.cursor = 'default';
+    }
   };
   
   resetBtn.onclick = () => {
     scale = 1;
     translateX = 0;
     translateY = 0;
+    lastTranslateX = 0;
+    lastTranslateY = 0;
     applyTransform();
   };
   
-  // Mouse wheel zoom - center-based
+  // Mouse wheel zoom - zoom towards mouse position
   container.addEventListener('wheel', (e) => {
     e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.15 : 0.15;
-    const newScale = Math.max(0.3, Math.min(3, scale + delta));
+    const delta = e.deltaY > 0 ? -0.3 : 0.3;
+    const newScale = Math.min(Math.max(1, scale + delta), 5);
     
-    // When zooming out, gradually center the content
-    if (newScale < scale) {
-      translateX *= 0.9;
-      translateY *= 0.9;
+    if (newScale === 1) {
+      scale = 1;
+      translateX = 0;
+      translateY = 0;
+      lastTranslateX = 0;
+      lastTranslateY = 0;
+    } else {
+      // Calculate mouse position relative to grid center
+      // Since grid is centered in container, we can use container coordinates
+      const rect = grid.getBoundingClientRect();
+      const gridCenterX = rect.left + rect.width / 2;
+      const gridCenterY = rect.top + rect.height / 2;
+      const mouseX = e.clientX - gridCenterX;
+      const mouseY = e.clientY - gridCenterY;
+      
+      // Adjust translation to zoom towards mouse
+      const scaleChange = newScale / scale;
+      translateX = translateX - (mouseX / scale) * (scaleChange - 1);
+      translateY = translateY - (mouseY / scale) * (scaleChange - 1);
+      
+      lastTranslateX = translateX;
+      lastTranslateY = translateY;
+      scale = newScale;
     }
     
-    scale = newScale;
     applyTransform();
   }, { passive: false });
   
-  // Pan functionality with bounds
+  // Pan functionality - only when zoomed in
   container.addEventListener('mousedown', (e) => {
-    isPanning = true;
-    startX = e.clientX;
-    startY = e.clientY;
-    lastTranslateX = translateX;
-    lastTranslateY = translateY;
-    container.style.cursor = 'grabbing';
+    if (scale > 1) {
+      e.preventDefault();
+      isPanning = true;
+      hasDragged = false;
+      startX = e.clientX;
+      startY = e.clientY;
+      container.style.cursor = 'grabbing';
+    }
   });
   
   container.addEventListener('mousemove', (e) => {
     if (!isPanning) return;
     e.preventDefault();
     
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
+    const dx = (e.clientX - startX) / scale;
+    const dy = (e.clientY - startY) / scale;
     
-    // Limit panning so content doesn't go too far off screen
-    const maxPan = 200 * scale;
-    translateX = Math.max(-maxPan, Math.min(maxPan, lastTranslateX + dx));
-    translateY = Math.max(-maxPan, Math.min(maxPan, lastTranslateY + dy));
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      hasDragged = true;
+    }
+    
+    // Update translation directly from last saved position
+    // No bounds check - "free" panning when zoomed
+    translateX = lastTranslateX + dx;
+    translateY = lastTranslateY + dy;
     
     applyTransform();
   });
   
-  container.addEventListener('mouseup', () => {
-    isPanning = false;
-    container.style.cursor = 'grab';
-  });
+  const stopPanning = () => {
+    if (isPanning) {
+      isPanning = false;
+      lastTranslateX = translateX;
+      lastTranslateY = translateY;
+      applyTransform(); // Update cursor
+    }
+  };
   
-  container.addEventListener('mouseleave', () => {
-    isPanning = false;
-    container.style.cursor = 'grab';
-  });
+  container.addEventListener('mouseup', stopPanning);
+  container.addEventListener('mouseleave', stopPanning);
   
   // ESC to close
   document.addEventListener('keydown', (e) => {
