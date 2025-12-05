@@ -1,21 +1,15 @@
 // Pin@Home - Column Scroller Module
-// Transform-based scrolling - moves track instead of individual items
 
-import { openFullscreenViewer } from './fullscreenViewer.js';
+import { calculateItemPositions } from './scroll/LayoutCalculator.js';
+import { ItemManager } from './scroll/ItemManager.js';
+import { Recycler } from './scroll/Recycler.js';
+import { createPinElement } from './scroll/DOMFactory.js';
 
-// Configuration for progressive loading (easy to tune)
 const LOADING_CONFIG = {
-  createRate: 2,    // Create X DOM elements per frame
-  revealRate: 3,    // Reveal X loaded images per frame
-  maxLoading: 3,    // Max images loading at once (the "tunnel")
-  minPending: 8,    // Keep at least X items in pipeline
-  minVisible: 1     // Need at least X visible before scrolling starts
+  maxLoading: 3,
+  minPending: 8
 };
 
-/**
- * Class to handle virtual scrolling for a single column
- * Uses transform on track for smooth scrolling (1 DOM write vs N)
- */
 export class ColumnScroller {
   constructor(container, track, imageUrls, speed) {
     this.container = container;
@@ -23,32 +17,24 @@ export class ColumnScroller {
     this.imageUrls = [...imageUrls];
     this.urlIndex = 0;
     this.speed = speed;
-    
-    // Track offset for transform-based scrolling
     this.trackOffset = 0;
+    this.columnWidth = 0;
     
-    // Item tracking - positions are relative to track, not viewport
-    this.items = [];           // Visible items: { element, url, height, localTop }
-    this.loadQueue = [];       // Items waiting to load (created but img.src not set)
-    this.loadingItems = [];    // Items currently loading (img.src set, waiting onload)
-    this.revealQueue = [];     // Loaded and ready to reveal
+    this.itemManager = new ItemManager();
+    this.recycler = new Recycler();
     
-    this.nextLocalTop = 0;     // Next position within track (not screen)
-    this.totalHeight = 0;      // Total height of all visible items
-    this.isStable = false;     // True when we have enough height for simple recycling
-    this.isDoneLoading = false; // True when ALL assigned images have been loaded
+    this.isDoneLoading = false;
     this.isPaused = false;
-    this.columnWidth = 0;      // Cached column width (avoids layout recalc)
+    this.hoverPause = false;
     
-    // Event handlers
-    this.container.addEventListener('mouseenter', () => this.isPaused = true);
-    this.container.addEventListener('mouseleave', () => this.isPaused = false);
+    this.container.addEventListener('mouseenter', () => this.hoverPause = true);
+    this.container.addEventListener('mouseleave', () => this.hoverPause = false);
     this.container.addEventListener('wheel', (e) => this.handleWheel(e), { passive: false });
   }
   
-  get viewportHeight() {
-    return window.innerHeight;
-  }
+  get items() { return this.itemManager.visibleItems; }
+  get totalHeight() { return this.itemManager.totalHeight; }
+  get isStable() { return this.totalHeight >= window.innerHeight * 2; }
   
   handleWheel(e) {
     e.preventDefault();
@@ -57,313 +43,184 @@ export class ColumnScroller {
   
   getNextUrl() {
     if (this.urlIndex >= this.imageUrls.length) {
-      this.urlIndex = 0;
+      return null;
     }
     return this.imageUrls[this.urlIndex++];
   }
   
   init() {
-    // Cache column width once (avoid layout recalc on every createItem)
     this.columnWidth = this.container.offsetWidth;
+    this.resizeObserver = new ResizeObserver(() => this.onResize());
+    this.resizeObserver.observe(this.container);
   }
   
-  /**
-   * Create item DOM but DON'T start loading yet (queue it)
-   */
   createItem() {
     const url = this.getNextUrl();
-    const columnWidth = this.columnWidth || this.container.offsetWidth;
-    
-    const pin = document.createElement('div');
-    pin.className = 'pin_at_home-pin';
-    pin.dataset.url = url;
-    pin.style.cssText = 'position: absolute; left: 0; right: 0; visibility: hidden; height: 0px;';
-    
-    const img = document.createElement('img');
-    img.alt = 'Pin image';
-    img.decoding = 'async';
-    // DON'T set img.src yet - queue it for controlled loading
-    
-    pin.onclick = () => openFullscreenViewer(url);
-    pin.appendChild(img);
-    this.track.appendChild(pin);
-    
-    // Add to load queue (NOT loading yet)
-    this.loadQueue.push({ element: pin, url, img, columnWidth });
-  }
-  
-  /**
-   * Start loading queued items (respects maxLoading limit)
-   */
-  processLoadQueue() {
-    // Only load up to maxLoading at a time
-    while (this.loadingItems.length < LOADING_CONFIG.maxLoading && this.loadQueue.length > 0) {
-      const item = this.loadQueue.shift();
-      this.startLoading(item);
+    if (!url) {
+      this.isDoneLoading = true;
+      return;
     }
+    
+    const columnWidth = this.columnWidth || this.container.offsetWidth;
+    const { element, img } = createPinElement(url);
+    
+    this.track.appendChild(element);
+    this.itemManager.addItem({ element, url, img, columnWidth });
   }
   
-  /**
-   * Actually start loading an image
-   */
   startLoading(item) {
     const { img, url, columnWidth } = item;
     
-    this.loadingItems.push(item);
-    
-    // No decode() - browser handles it naturally during paint
     img.onload = () => {
       const height = img.naturalHeight * (columnWidth / img.naturalWidth);
-      this.onImageLoaded(item, height);
+      this.itemManager.markReady(item, height);
     };
     
     img.onerror = () => {
       item.element.remove();
-      const idx = this.loadingItems.indexOf(item);
-      if (idx >= 0) this.loadingItems.splice(idx, 1);
+      this.itemManager.removeItem(item);
     };
     
-    // NOW start loading
     img.src = url;
   }
   
-  /**
-   * Called when image finishes loading
-   */
-  onImageLoaded(item, height) {
-    // Remove from loading
-    const idx = this.loadingItems.indexOf(item);
-    if (idx >= 0) this.loadingItems.splice(idx, 1);
+  revealImage(item) {
+    const { element: pin, img, height } = item;
+    const localTop = this.itemManager.nextLocalTop;
     
-    // Add to reveal queue
-    this.revealQueue.push({ pendingItem: item, height });
-  }
-  
-  /**
-   * Reveal image - position is local to track (not affected by scroll)
-   */
-  revealImage(pendingItem, height) {
-    const { element: pin, url, img } = pendingItem;
-    
-    const localTop = this.nextLocalTop;
-    
-    // Position within track (doesn't change during scroll)
     pin.style.cssText = `position: absolute; left: 0; right: 0; height: ${height}px; top: ${localTop}px; visibility: visible;`;
     img.classList.add('loaded');
     
-    const item = { element: pin, url, height, localTop };
-    this.items.push(item);
+    item.localTop = localTop;
+    this.itemManager.reveal(item, localTop);
     
-    this.nextLocalTop += height;
-    this.totalHeight += height;
-    
-    // isStable: controls recycling (when we have enough height)
-    const hasEnoughHeight = this.totalHeight >= this.viewportHeight * 2;
-    if (!this.isStable && hasEnoughHeight) {
-      this.isStable = true;
-    }
-    
-    // isDoneLoading: controls creation (when all images are loaded)
-    const allImagesRevealed = this.items.length >= this.imageUrls.length;
-    if (!this.isDoneLoading && allImagesRevealed) {
+    if (!this.isDoneLoading && this.items.length >= this.imageUrls.length) {
       this.isDoneLoading = true;
-      console.log(`✅ Column done loading: ${this.items.length}/${this.imageUrls.length} images`);
     }
   }
   
-  // ======= Budget-controlled methods (called from grid.js) =======
+  // === Budget-controlled methods (called from grid.js) ===
   
-  /**
-   * Check if this column needs more items created
-   */
   needsCreate() {
     if (this.isDoneLoading) return false;
-    const inPipeline = this.loadQueue.length + this.loadingItems.length + this.revealQueue.length;
-    return inPipeline < 8; // minPending
+    return this.itemManager.pipelineCount < LOADING_CONFIG.minPending;
   }
   
-  /**
-   * Create one item (DOM only, no loading)
-   */
   createOne() {
     this.createItem();
   }
   
-  /**
-   * Check if we can start another load
-   * Note: grid.js controls the actual budget per phase
-   */
   canStartLoad() {
-    return this.loadQueue.length > 0;
+    return this.itemManager.pendingItems.length > 0;
   }
   
-  /**
-   * Start loading one item from queue
-   */
   startOneLoad() {
-    if (this.loadQueue.length > 0) {
-      const item = this.loadQueue.shift();
+    const pending = this.itemManager.pendingItems;
+    if (pending.length > 0) {
+      const item = pending[0];
+      this.itemManager.startLoading(item);
       this.startLoading(item);
     }
   }
   
-  /**
-   * Check if there are items to reveal
-   */
   hasItemsToReveal() {
-    return this.revealQueue.length > 0;
+    return this.itemManager.readyItems.length > 0;
   }
   
-  /**
-   * Reveal one item
-   */
   revealOne() {
-    if (this.revealQueue.length > 0) {
-      const { pendingItem, height } = this.revealQueue.shift();
-      this.revealImage(pendingItem, height);
+    const ready = this.itemManager.readyItems;
+    if (ready.length > 0) {
+      this.revealImage(ready[0]);
     }
   }
   
   /**
-   * Update scroll position (always runs, it's cheap)
+   * Add a cloned image with known height (called by grid for cross-column filling)
+   * @param {string} url - Image URL (already cached)
+   * @param {number} height - Pre-calculated height for this column width
    */
+  addClonedImage(url, height) {
+    const { element, img } = createPinElement(url);
+    img.src = url; // already cached, loads instantly
+    
+    const localTop = this.itemManager.nextLocalTop;
+    element.style.cssText = `position: absolute; left: 0; right: 0; height: ${height}px; top: ${localTop}px; visibility: visible;`;
+    img.classList.add('loaded');
+    
+    this.track.appendChild(element);
+    
+    this.itemManager.addClone({
+      element, url, img,
+      height,
+      localTop
+    });
+  }
+  
+  /**
+   * Check if this column needs more content to fill viewport
+   */
+  needsFilling() {
+    return this.totalHeight < window.innerHeight * 2;
+  }
+  
   updateScroll() {
-    if (!this.isPaused && this.items.length >= 1) {
+    if (!this.isPaused && !this.hoverPause && this.items.length >= 1) {
       this.scroll(this.speed);
     }
   }
   
-  /**
-   * Scroll by moving the track transform (single DOM write!)
-   */
   scroll(delta) {
     this.trackOffset += delta;
+    this.track.style.transform = `translateY(${this.trackOffset}px)`;
+    this.recycler.update(this.items, this.trackOffset, window.innerHeight);
+  }
+  
+  onResize() {
+    const newWidth = this.container.offsetWidth;
+    if (newWidth === this.columnWidth || newWidth === 0) return;
     
-    // Single DOM write for all items!
+    // Sync array order with visual order (Recycler changes visual, not array)
+    this.itemManager.sortByPosition();
+    
+    const visibleItems = this.itemManager.visibleItems;
+    if (visibleItems.length === 0) {
+      this.columnWidth = newWidth;
+      return;
+    }
+    
+    // Find anchor item (closest to viewport top) to preserve scroll position
+    let anchorItem = visibleItems[0];
+    let minDistance = Math.abs(anchorItem.localTop + this.trackOffset);
+    
+    for (const item of visibleItems) {
+      const distance = Math.abs(item.localTop + this.trackOffset);
+      if (distance < minDistance) {
+        minDistance = distance;
+        anchorItem = item;
+      }
+    }
+    
+    const anchorScreenTop = anchorItem.localTop + this.trackOffset;
+    
+    // Recalculate layout
+    const positions = calculateItemPositions(visibleItems, newWidth);
+    
+    visibleItems.forEach((item, i) => {
+      if (positions[i]) {
+        this.itemManager.updatePosition(item, positions[i].height, positions[i].top);
+        item.element.style.height = `${item.height}px`;
+        item.element.style.top = `${item.localTop}px`;
+      }
+    });
+    
+    this.columnWidth = newWidth;
+    
+    // Restore scroll position relative to anchor
+    // newTrackOffset + anchor.newLocalTop = anchorScreenTop
+    this.trackOffset = anchorScreenTop - anchorItem.localTop;
     this.track.style.transform = `translateY(${this.trackOffset}px)`;
     
-    // Only recycle in stable mode (before stable, just let items accumulate)
-    if (this.isStable) {
-      this.recycleSimple(delta);
-    }
-    // Skip fillGaps during loading - it's expensive and not needed
-  }
-  
-  /**
-   * Simple O(1) recycling for stable mode
-   * Only checks first/last item based on scroll direction
-   */
-  recycleSimple(delta) {
-    if (this.items.length < 2) return;
-    
-    if (delta < 0) {
-      // Scrolling UP: first item might go off-screen at top
-      const first = this.items[0];
-      const firstScreenBottom = this.getScreenTop(first) + first.height;
-      
-      if (firstScreenBottom < 0) {
-        // Move first to end
-        const last = this.items[this.items.length - 1];
-        first.localTop = last.localTop + last.height;
-        first.element.style.top = `${first.localTop}px`;
-        this.items.shift();
-        this.items.push(first);
-      }
-    } else {
-      // Scrolling DOWN: last item might go off-screen at bottom
-      const last = this.items[this.items.length - 1];
-      const lastScreenTop = this.getScreenTop(last);
-      
-      if (lastScreenTop > this.viewportHeight) {
-        // Move last to start
-        const first = this.items[0];
-        last.localTop = first.localTop - last.height;
-        last.element.style.top = `${last.localTop}px`;
-        this.items.pop();
-        this.items.unshift(last);
-      }
-    }
-  }
-  
-  /**
-   * Get item's screen position (localTop + trackOffset)
-   */
-  getScreenTop(item) {
-    return item.localTop + this.trackOffset;
-  }
-  
-  /**
-   * Fill gaps by recycling items
-   * Note: items array is kept sorted by localTop (lowest first)
-   * because revealImage() appends, and recycling uses unshift/push
-   */
-  fillGaps() {
-    if (this.items.length === 0) return;
-    
-    // Fill gap at TOP
-    while (this.items.length > 0) {
-      const firstItem = this.items[0];
-      const firstScreenTop = this.getScreenTop(firstItem);
-      
-      if (firstScreenTop <= 0) break; // No gap at top
-      
-      // Find item off-screen at bottom to recycle
-      let recycleIndex = -1;
-      for (let i = this.items.length - 1; i >= 0; i--) {
-        const screenTop = this.getScreenTop(this.items[i]);
-        if (screenTop > this.viewportHeight) {
-          recycleIndex = i;
-          break;
-        }
-      }
-      
-      if (recycleIndex >= 0) {
-        const recycled = this.items[recycleIndex];
-        // Move to top in track coordinates
-        recycled.localTop = firstItem.localTop - recycled.height;
-        recycled.element.style.top = `${recycled.localTop}px`;
-        // Reorder in array
-        this.items.splice(recycleIndex, 1);
-        this.items.unshift(recycled);
-      } else {
-        break;
-      }
-    }
-    
-    // Fill gap at BOTTOM
-    while (this.items.length > 0) {
-      const lastItem = this.items[this.items.length - 1];
-      const lastScreenBottom = this.getScreenTop(lastItem) + lastItem.height;
-      
-      if (lastScreenBottom >= this.viewportHeight) break; // No gap at bottom
-      
-      // Find item off-screen at top to recycle
-      let recycleIndex = -1;
-      for (let i = 0; i < this.items.length; i++) {
-        const screenBottom = this.getScreenTop(this.items[i]) + this.items[i].height;
-        if (screenBottom < 0) {
-          recycleIndex = i;
-          break;
-        }
-      }
-      
-      if (recycleIndex >= 0) {
-        const recycled = this.items[recycleIndex];
-        // Move to bottom in track coordinates
-        recycled.localTop = lastItem.localTop + lastItem.height;
-        recycled.element.style.top = `${recycled.localTop}px`;
-        // Reorder in array
-        this.items.splice(recycleIndex, 1);
-        this.items.push(recycled);
-      } else {
-        break;
-      }
-    }
-    
-    // Keep nextLocalTop in sync
-    if (this.items.length > 0) {
-      const lastItem = this.items[this.items.length - 1];
-      this.nextLocalTop = lastItem.localTop + lastItem.height;
-    }
+    // Reset flag so grid fills gaps if needed
+    // (This is handled by grid.js listener, but good to know)
   }
 }

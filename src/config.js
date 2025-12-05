@@ -4,10 +4,10 @@ export const CONFIG = {
   
   // PIN_COUNT will be calculated dynamically
   SCAN_INTERVAL: 500,       // 500ms between scans (fast!)
-  MAX_SCAN_ATTEMPTS: 30,    // More attempts for thorough scanning
+  MAX_SCAN_ATTEMPTS: 100,   // Many attempts for thorough scanning
   MIN_POOL_SIZE: 40,
   CACHE_KEY_PREFIX: 'pin_at_home_cache_',
-  MAX_CACHE_SIZE: 200, // Keep last 200 pins
+  MAX_CACHE_SIZE: 9999, // Support large boards
   
   // Grid configuration
   GRID_ROWS: 2,

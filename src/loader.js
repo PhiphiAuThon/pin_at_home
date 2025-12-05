@@ -9,37 +9,16 @@ function isBoardPage(path) {
   return segments.length === 2 && !NON_BOARD_PATTERNS.includes(segments[0].toLowerCase());
 }
 
-function injectIndicator() {
-  // Remove existing indicator if any
-  const existing = document.getElementById('pin_at_home-indicator');
-  if (existing) existing.remove();
+async function loadScanner() {
+  // Prevent multiple loads
+  if (document.getElementById('pin_at_home-indicator')) return;
   
-  const indicator = document.createElement('div');
-  indicator.id = 'pin_at_home-indicator';
-  indicator.className = 'clickable';
-  indicator.innerHTML = `
-    <span class="indicator-icon">📌</span>
-    <span class="indicator-text">Scan this board?</span>
-  `;
-  indicator.style.cursor = 'pointer';
-  
-  // Click to start scanning
-  indicator.onclick = async () => {
-    indicator.onclick = null;
-    indicator.style.cursor = 'default';
-    indicator.classList.remove('clickable');
-    indicator.querySelector('.indicator-text').textContent = 'Scanning...';
-    
-    try {
-      const scannerOnlySrc = chrome.runtime.getURL('src/scannerOnly.js');
-      await import(scannerOnlySrc);
-    } catch (e) {
-      console.error('Pin@Home: Scanner failed', e);
-      indicator.remove();
-    }
-  };
-  
-  document.body.appendChild(indicator);
+  try {
+    const scannerOnlySrc = chrome.runtime.getURL('src/scannerOnly.js');
+    await import(scannerOnlySrc);
+  } catch (e) {
+    console.error('Pin@Home: Failed to load scanner', e);
+  }
 }
 
 function checkAndInject() {
@@ -49,7 +28,7 @@ function checkAndInject() {
     // Wait a moment for page to stabilize after navigation
     setTimeout(() => {
       if (isBoardPage(window.location.pathname) && document.body) {
-        injectIndicator();
+        loadScanner();
       }
     }, 500);
   } else {

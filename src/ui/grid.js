@@ -1,5 +1,4 @@
 // Pin@Home - Grid Module
-// Orchestrates grid rendering using ColumnScroller
 
 import { CONFIG } from '../config.js';
 import { state } from '../state.js';
@@ -10,131 +9,209 @@ import { switchToSelectionMode } from './browseMode.js';
 import { updateSidepanel } from './sidepanel.js';
 import { ColumnScroller } from './columnScroller.js';
 
-// Module-level state
+// ============ STATE ============
+
 let animationFrameId = null;
 let columnScrollers = [];
+let scrollPaused = false;
+let manualPause = false;
+let speedMultiplier = 1.0;
+let pinCountLimit = 'all';
+let currentPhase = 'SPRINT';
+let allColumnsFilled = false;
 
-/**
- * Render random pins to the grid (Grid-based collage)
- * Hydrates existing columns from early-init.js OR creates new ones if needed
- */
+// ============ EXPORTS: PAUSE ============
+
+export function setScrollPaused(paused, isManual = false) {
+  scrollPaused = paused;
+  if (isManual) manualPause = paused;
+  columnScrollers.forEach(s => s.isPaused = paused);
+}
+
+export function getScrollPaused() {
+  return scrollPaused;
+}
+
+export function isManuallyPaused() {
+  return manualPause;
+}
+
+// ============ EXPORTS: SPEED ============
+
+export function setScrollSpeedMultiplier(percent) {
+  speedMultiplier = percent / 100;
+  columnScrollers.forEach((scroller, index) => {
+    const baseSpeed = (index % 2 === 0 ? -1 : 1) * CONFIG.SCROLL_SPEED;
+    scroller.speed = baseSpeed * speedMultiplier;
+  });
+}
+
+export function getScrollSpeedMultiplier() {
+  return speedMultiplier * 100;
+}
+
+// ============ EXPORTS: PIN COUNT ============
+
+export function setPinCountLimit(count) {
+  pinCountLimit = count;
+}
+
+export function getPinCountLimit() {
+  return pinCountLimit;
+}
+
+// ============ EXPORTS: RENDER ============
+
 export async function renderPins() {
   if (!state.grid) return;
   
-  // Stop any existing animation
-  if (animationFrameId) {
-    cancelAnimationFrame(animationFrameId);
-    animationFrameId = null;
-  }
-  columnScrollers = [];
+  stopAnimation();
   
-  // Shuffle available pins
-  const shuffled = [...state.pinsFound].sort(() => Math.random() - 0.5);
+  const pins = getShuffledPins();
+  initializeColumns(pins);
   
-  if (CONFIG.DEBUG) console.log(`🎨 Gallery: Rendering ${shuffled.length} pins`);
-  
-  // Hide loading indicator
-  if (state.loading) state.loading.style.display = 'none';
-  
-  // Check if columns already exist (from early-init.js)
-  let existingColumns = state.grid.querySelectorAll('.pin-column');
-  
-  if (existingColumns.length > 0) {
-    // HYDRATE: Reuse existing columns from early-init
-    if (CONFIG.DEBUG) console.log(`🎨 Gallery: Hydrating ${existingColumns.length} existing columns for ${state.pinsFound.length} pins`);
-    
-    // Clear tracks (images) but keep column structure
-    // Batch: collect all tracks first, then clear (avoids read-write interleaving)
-    const tracks = Array.from(existingColumns, col => col.querySelector('.pin-track'));
-    tracks.forEach(track => track?.replaceChildren());
-    
-  } else {
-    // CREATE: No columns exist, create them (fallback or shuffle scenario)
-    const availableWidth = state.refsheetMode ? window.innerWidth - CONFIG.SIDEPANEL_WIDTH : window.innerWidth;
-    const columns = Math.max(Math.ceil(availableWidth / CONFIG.AVG_IMAGE_WIDTH), CONFIG.MIN_COLUMNS);
-    
-    if (CONFIG.DEBUG) console.log(`🎨 Gallery: Creating ${columns} columns for ${state.pinsFound.length} pins`);
-    
-    // Clear current grid
-    state.grid.innerHTML = '';
-    
-    // Set to Flexbox for columns
-    state.grid.style.display = 'flex';
-    state.grid.style.overflowY = 'hidden';
-    
-    for (let i = 0; i < columns; i++) {
-      const column = document.createElement('div');
-      column.className = 'pin-column';
-      
-      const track = document.createElement('div');
-      track.className = 'pin-track';
-      
-      column.appendChild(track);
-      state.grid.appendChild(column);
-    }
-    
-    existingColumns = state.grid.querySelectorAll('.pin-column');
-  }
-  
-  // Build column data for scrollers
-  const columnData = [];
-  existingColumns.forEach((column, colIndex) => {
-    const track = column.querySelector('.pin-track');
-    
-    // Distribute images to this column (round-robin)
-    const columnImages = [];
-    for (let i = colIndex; i < shuffled.length; i += existingColumns.length) {
-      columnImages.push(shuffled[i]);
-    }
-    
-    // If we have very few images, repeat them
-    while (columnImages.length < 20 && columnImages.length > 0) {
-      columnImages.push(...columnImages);
-    }
-    
-    columnData.push({ column, track, columnImages, colIndex });
-  });
-  
-  // Initialize ALL columns at once (so round-robin works from the start)
-  for (const { column, track, columnImages, colIndex } of columnData) {
-    const speed = (colIndex % 2 === 0 ? -1 : 1) * CONFIG.SCROLL_SPEED;
-    const scroller = new ColumnScroller(column, track, columnImages, speed);
-    scroller.init();
-    columnScrollers.push(scroller);
-  }
-  
-  if (CONFIG.DEBUG) console.log(`🎨 Gallery: Initialized ${columnScrollers.length} columns`);
-  
-  // Start animation loop
   startAnimationLoop();
-  if (CONFIG.DEBUG) console.log(`✨ Animation started with all columns ready`);
   
-  // If in browse mode, ensure we stay in selection mode and update counts
   if (state.refsheetMode) {
     switchToSelectionMode();
     updateSidepanel();
   }
 }
 
-/**
- * Start the animation loop for all column scrollers
- * Uses phase-aware budget to limit work per frame across ALL columns
- */
+export function isAllStable() {
+  return columnScrollers.length > 0 && columnScrollers.every(s => s.isStable);
+}
 
-// Phase tracking: SPRINT → COAST → STABLE
-let currentPhase = 'SPRINT';
+export function handleClearCache() {
+  clearCurrentBoardCache(() => {
+    if (state.loading) state.loading.style.display = 'block';
+    if (state.grid) state.grid.innerHTML = '';
+    autoScroll();
+    startScanning(renderPins);
+  });
+}
 
-/**
- * Get frame budget based on current loading phase
- */
-function getFrameBudget() {
-  const phases = CONFIG.LOADING_PHASES;
+// ============ RENDER HELPERS ============
+
+function stopAnimation() {
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = null;
+  }
+  columnScrollers = [];
+  allColumnsFilled = false;
+}
+
+function getShuffledPins() {
+  let pins = [...state.pinsFound].sort(() => Math.random() - 0.5);
+  
+  if (pinCountLimit !== 'all') {
+    pins = pins.slice(0, parseInt(pinCountLimit, 10));
+  }
+  
+  if (state.loading) state.loading.style.display = 'none';
+  
+  return pins;
+}
+
+function initializeColumns(pins) {
+  const columns = createColumns();
+
+  columns.forEach((column, index) => {
+    const track = column.querySelector('.pin-track');
+    const images = distributeImages(pins, index, columns.length);
+    const speed = calculateSpeed(index);
+    
+    const scroller = new ColumnScroller(column, track, images, speed);
+    scroller.init();
+    columnScrollers.push(scroller);
+  });
+  
+  // Re-fill columns after window resize (heights change, may need more images)
+  window.addEventListener('resize', () => {
+    allColumnsFilled = false;
+  });
+}
+
+function createColumns() {
+  const availableWidth = state.refsheetMode 
+    ? window.innerWidth - CONFIG.SIDEPANEL_WIDTH 
+    : window.innerWidth;
+  const count = Math.max(Math.ceil(availableWidth / CONFIG.AVG_IMAGE_WIDTH), CONFIG.MIN_COLUMNS);
+  
+  state.grid.innerHTML = '';
+  state.grid.style.display = 'flex';
+  state.grid.style.overflowY = 'hidden';
+  
+  for (let i = 0; i < count; i++) {
+    const column = document.createElement('div');
+    column.className = 'pin-column';
+    
+    const track = document.createElement('div');
+    track.className = 'pin-track';
+    
+    column.appendChild(track);
+    state.grid.appendChild(column);
+  }
+  
+  return state.grid.querySelectorAll('.pin-column');
+}
+
+function distributeImages(pins, columnIndex, totalColumns) {
+  const images = [];
+  
+  for (let i = columnIndex; i < pins.length; i += totalColumns) {
+    images.push(pins[i]);
+  }
+  
+  return images;
+}
+
+function calculateSpeed(columnIndex) {
+  const direction = columnIndex % 2 === 0 ? -1 : 1;
+  return direction * CONFIG.SCROLL_SPEED * speedMultiplier;
+}
+
+// ============ ANIMATION LOOP ============
+
+function startAnimationLoop() {
+  let frameCounter = 0;
+  currentPhase = 'SPRINT';
+  
+  const animate = () => {
+    frameCounter++;
+    
+    if (shouldDoWork(frameCounter)) {
+      doFrameWork();
+    }
+    
+    checkAndFillColumns();
+    updateAllScrolls();
+    checkPhaseTransitions();
+    
+    animationFrameId = requestAnimationFrame(animate);
+  };
+  
+  animationFrameId = requestAnimationFrame(animate);
+}
+
+function shouldDoWork(frameCounter) {
+  const phaseConfig = CONFIG.LOADING_PHASES[currentPhase] || CONFIG.LOADING_PHASES.COAST;
+  
   if (currentPhase === 'STABLE') {
-    // Continue creates if any column still needs them
+    return columnScrollers.some(s => !s.isDoneLoading);
+  }
+  
+  return frameCounter % (phaseConfig.frameSkip || 1) === 0;
+}
+
+function getFrameBudget() {
+  if (currentPhase === 'STABLE') {
     const needsCreates = columnScrollers.some(s => !s.isDoneLoading);
     return { creates: needsCreates ? 5 : 0, loads: 5, reveals: 5 };
   }
-  const phase = phases[currentPhase] || phases.COAST;
+  
+  const phase = CONFIG.LOADING_PHASES[currentPhase] || CONFIG.LOADING_PHASES.COAST;
   return {
     creates: phase.createsPerFrame,
     loads: phase.maxConcurrentLoads,
@@ -142,131 +219,115 @@ function getFrameBudget() {
   };
 }
 
-function startAnimationLoop() {
-  let columnIndex = 0;  // For round-robin staggering
-  let frameCounter = 0; // For frame skipping
-  const COLUMNS_PER_FRAME = 2;  // Only 2 columns do heavy work per frame
+function doFrameWork() {
+  const budget = getFrameBudget();
   
-  // Reset phase on new animation
-  currentPhase = 'SPRINT';
-  if (CONFIG.DEBUG) console.log('📊 Loading phase: SPRINT (1 reveal/frame)');
+  doRoundRobinWork(budget.creates, s => s.needsCreate(), s => s.createOne());
+  doRoundRobinWork(budget.loads, s => s.canStartLoad(), s => s.startOneLoad());
+  doRoundRobinWork(budget.reveals, s => s.hasItemsToReveal(), s => s.revealOne());
+}
+
+function doRoundRobinWork(budget, canDo, doWork) {
+  let remaining = budget;
   
-  const animate = () => {
-    frameCounter++;
+  while (remaining > 0) {
+    let didWork = false;
     
-    // Get current phase config for frame skip check
-    const phases = CONFIG.LOADING_PHASES;
-    const phaseConfig = phases[currentPhase] || phases.COAST;
-    // In STABLE: still do work if any column hasn't finished loading
-    const needsMoreLoading = columnScrollers.some(s => !s.isDoneLoading);
-    const shouldDoWork = currentPhase === 'STABLE' 
-      ? needsMoreLoading 
-      : (frameCounter % (phaseConfig.frameSkip || 1) === 0);
-    
-    // Only do heavy work on designated frames
-    let createsLeft = 0, loadsLeft = 0, revealsLeft = 0;
-    if (shouldDoWork) {
-      const budget = getFrameBudget();
-      createsLeft = budget.creates;
-      loadsLeft = budget.loads;
-      revealsLeft = budget.reveals;
-    }
-    
-    // Round-robin: spread work evenly across ALL columns
-    // Creates
-    while (createsLeft > 0) {
-      let didWork = false;
-      for (const scroller of columnScrollers) {
-        if (createsLeft > 0 && scroller.needsCreate()) {
-          scroller.createOne();
-          createsLeft--;
-          didWork = true;
-        }
-      }
-      if (!didWork) break;
-    }
-    
-    // Loads
-    while (loadsLeft > 0) {
-      let didWork = false;
-      for (const scroller of columnScrollers) {
-        if (loadsLeft > 0 && scroller.canStartLoad()) {
-          scroller.startOneLoad();
-          loadsLeft--;
-          didWork = true;
-        }
-      }
-      if (!didWork) break;
-    }
-    
-    // Reveals
-    while (revealsLeft > 0) {
-      let didWork = false;
-      for (const scroller of columnScrollers) {
-        if (revealsLeft > 0 && scroller.hasItemsToReveal()) {
-          scroller.revealOne();
-          revealsLeft--;
-          didWork = true;
-        }
-      }
-      if (!didWork) break;
-    }
-    
-    // ALL columns scroll every frame (cheap operation)
     for (const scroller of columnScrollers) {
-      scroller.updateScroll();
-    }
-    
-    // Check phase transitions
-    if (currentPhase === 'SPRINT') {
-      // Transition to COAST when all columns have minimum visible images
-      const allHaveMinVisible = columnScrollers.length > 0 && columnScrollers.every(
-        s => s.items.length >= CONFIG.LOADING_PHASES.SPRINT_UNTIL_VISIBLE
-      );
-      if (allHaveMinVisible) {
-        currentPhase = 'COAST';
-        if (CONFIG.DEBUG) console.log('📊 Loading phase: SPRINT → COAST (conservative)');
-      }
-    } else if (currentPhase === 'COAST') {
-      // Transition to STABLE when all columns are stable
-      const allStable = columnScrollers.length > 0 && columnScrollers.every(s => s.isStable);
-      if (allStable) {
-        currentPhase = 'STABLE';
-        if (CONFIG.DEBUG) console.log('📊 Loading phase: COAST → STABLE (recycling only)');
+      if (remaining > 0 && canDo(scroller)) {
+        doWork(scroller);
+        remaining--;
+        didWork = true;
       }
     }
     
-    animationFrameId = requestAnimationFrame(animate);
-  };
-  animationFrameId = requestAnimationFrame(animate);
+    if (!didWork) break;
+  }
 }
 
-/**
- * Shuffle and re-render pins
- */
-export function shufflePins() {
-  renderPins();
-  if (CONFIG.DEBUG) console.log('🔄 Shuffled! Using pool of', state.pinsFound.length, 'pins');
+function updateAllScrolls() {
+  for (const scroller of columnScrollers) {
+    scroller.updateScroll();
+  }
 }
 
-/**
- * Check if all columns have reached stable mode
- */
-export function isAllStable() {
-  return columnScrollers.length > 0 && columnScrollers.every(s => s.isStable);
+// ============ CROSS-COLUMN FILLING ============
+
+function checkAndFillColumns() {
+  if (allColumnsFilled) return;
+  
+  // Wait until all columns have finished loading their original images
+  const allDone = columnScrollers.every(s => s.isDoneLoading && s.itemManager.pipelineCount === 0);
+  if (!allDone) return;
+  
+  fillAllColumns();
+  allColumnsFilled = true;
 }
 
-/**
- * Handle clear cache button click
- */
-export function handleClearCache() {
-  clearCurrentBoardCache(() => {
-    // Show loading and restart scanning
-    if (state.loading) state.loading.style.display = 'block';
-    if (state.grid) state.grid.innerHTML = '';
-    
-    // Restart scanning
-    autoScroll();
-    startScanning(renderPins);
-  });
+function collectAllLoadedImages() {
+  const images = [];
+  for (const scroller of columnScrollers) {
+    for (const item of scroller.items) {
+      if (!item.isClone) {
+        // Store original aspect ratio so we can calculate height for any column width
+        images.push({
+          url: item.url,
+          aspectRatio: item.height / scroller.columnWidth
+        });
+      }
+    }
+  }
+  return images;
+}
+
+function fillAllColumns() {
+  const allImages = collectAllLoadedImages();
+  if (allImages.length === 0) return;
+  
+  // Track which URLs are already in each column
+  const existingUrls = columnScrollers.map(scroller => 
+    new Set(scroller.items.map(item => item.url))
+  );
+  
+  let imageIndex = 0;
+  let safety = 0;
+  const maxIterations = allImages.length * columnScrollers.length * 10;
+  
+  while (columnScrollers.some(s => s.needsFilling()) && safety < maxIterations) {
+    for (let i = 0; i < columnScrollers.length; i++) {
+      const scroller = columnScrollers[i];
+      if (scroller.needsFilling()) {
+        // Find next image not already in this column
+        let attempts = 0;
+        let img;
+        do {
+          img = allImages[imageIndex % allImages.length];
+          imageIndex++;
+          attempts++;
+        } while (existingUrls[i].has(img.url) && attempts < allImages.length);
+        
+        // Only add if we found a non-duplicate (or if all images are already in column)
+        const height = img.aspectRatio * scroller.columnWidth;
+        scroller.addClonedImage(img.url, height);
+        existingUrls[i].add(img.url);
+      }
+    }
+    safety++;
+  }
+}
+
+function checkPhaseTransitions() {
+  if (currentPhase === 'SPRINT') {
+    const allHaveMinVisible = columnScrollers.every(
+      s => s.items.length >= CONFIG.LOADING_PHASES.SPRINT_UNTIL_VISIBLE
+    );
+    if (allHaveMinVisible) {
+      currentPhase = 'COAST';
+    }
+  } else if (currentPhase === 'COAST') {
+    const allStable = columnScrollers.every(s => s.isStable);
+    if (allStable) {
+      currentPhase = 'STABLE';
+    }
+  }
 }

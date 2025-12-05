@@ -120,3 +120,97 @@ export function autoScroll() {
   
   doOneScroll();
 }
+
+/**
+ * Scroll to the bottom of the page to load all lazy-loaded pins.
+ * Returns a promise that resolves when scrolling is complete.
+ * @param {Object} options - Configuration options
+ * @param {function} options.onProgress - Callback for scroll progress updates
+ * @param {number} options.scrollStep - Pixels to scroll per step (default: 800)
+ * @param {number} options.scrollDelay - Delay between scrolls in ms (default: 300)
+ * @param {number} options.maxNoChangeAttempts - Max attempts when no height change (default: 5)
+ * @returns {Promise<boolean>} Resolves true when bottom is reached
+ */
+export function scrollToBottom(options = {}) {
+  const {
+    onProgress = null,
+    scrollStep = 800,
+    scrollDelay = 300,
+    maxNoChangeAttempts = 5
+  } = options;
+  
+  return new Promise((resolve) => {
+    let lastHeight = document.documentElement.scrollHeight;
+    let noChangeCount = 0;
+    let isScrolling = true;
+    
+    function doScroll() {
+      if (!isScrolling) return;
+      
+      const scrollHeight = document.documentElement.scrollHeight;
+      const scrollTop = window.scrollY;
+      const clientHeight = window.innerHeight;
+      
+      // Check if we're at the bottom
+      const atBottom = scrollTop + clientHeight >= scrollHeight - 10;
+      
+      if (atBottom) {
+        // At bottom - check if page height is still increasing (lazy load)
+        if (scrollHeight === lastHeight) {
+          noChangeCount++;
+          
+          if (noChangeCount >= maxNoChangeAttempts) {
+            // No new content after multiple attempts - we're done
+            isScrolling = false;
+            if (CONFIG.DEBUG) console.log('🧘 scrollToBottom: Reached true bottom');
+            resolve(true);
+            return;
+          }
+        } else {
+          // Height changed - more content loaded
+          noChangeCount = 0;
+          lastHeight = scrollHeight;
+        }
+      }
+      
+      // Report progress
+      if (onProgress) {
+        const progress = Math.min(100, Math.round((scrollTop / scrollHeight) * 100));
+        onProgress(progress, scrollHeight);
+      }
+      
+      // Scroll down
+      window.scrollBy(0, scrollStep);
+      
+      // Schedule next scroll
+      setTimeout(doScroll, scrollDelay);
+    }
+    
+    // Start scrolling
+    doScroll();
+  });
+}
+
+/**
+ * Stops any active scrollToBottom operation (for cleanup)
+ */
+let activeScrollController = null;
+
+export function createScrollController() {
+  let isStopped = false;
+  
+  const controller = {
+    stop: () => { isStopped = true; },
+    isStopped: () => isStopped
+  };
+  
+  activeScrollController = controller;
+  return controller;
+}
+
+export function stopActiveScroll() {
+  if (activeScrollController) {
+    activeScrollController.stop();
+    activeScrollController = null;
+  }
+}

@@ -9,28 +9,111 @@
   background: rgba(0, 0, 0, 0.85);
   backdrop-filter: blur(10px);
   color: white;
-  padding: 10px 18px;
-  border-radius: 25px;
+  padding: 12px 20px;
+  border-radius: 12px;
   font-size: 14px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  z-index: 999999;
+  z-index: 999999999999;
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: flex-start;
+  gap: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   transition: opacity 0.3s, transform 0.3s;
+  min-width: 280px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 #pin_at_home-indicator .indicator-icon {
-  font-size: 16px;
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+#pin_at_home-indicator .indicator-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+#pin_at_home-indicator .indicator-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
 }
 
 #pin_at_home-indicator .indicator-text {
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+#pin_at_home-indicator .indicator-details {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 2px;
+}
+
+/* Scan Button */
+.indicator-btn {
+  background: #E60023; /* Pinterest Red */
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.indicator-btn:hover {
+  background: #ad081b;
+  transform: scale(1.05);
+}
+
+.indicator-btn:active {
+  transform: scale(0.95);
+}
+
+/* Progress bar container */
+#pin_at_home-indicator .indicator-progress {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+/* Progress bar fill */
+#pin_at_home-indicator .indicator-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #4CAF50, #8BC34A);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* Scanning animation - pulsing gradient */
+#pin_at_home-indicator .indicator-progress-bar.scanning {
+  background: linear-gradient(90deg, #2196F3, #03A9F4, #00BCD4, #2196F3);
+  background-size: 200% 100%;
+  animation: scanPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes scanPulse {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 
 #pin_at_home-indicator.done {
   background: rgba(34, 139, 34, 0.9);
+}
+
+#pin_at_home-indicator.done .indicator-progress-bar {
+  background: #fff;
+  opacity: 0.5;
 }
 
 #pin_at_home-indicator.error {
@@ -50,7 +133,7 @@
   width: 100vw;
   height: 100vh;
   background-color: #111111; /* Deep dark background */
-  z-index: 2147483647; /* Max z-index to cover everything */
+  z-index: 2; /* Max z-index to cover everything */
   overflow-y: auto;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
   opacity: 1; /* Start visible for instant coverage */
@@ -63,9 +146,9 @@
 #pin_at_home-header {
   position: fixed;
   bottom: 20px;
-  left: 20px;
+  left: 80px; /* Make room for pause button */
   right: 20px;
-  z-index: 2147483648;
+  z-index: 3;
   display: flex;
   justify-content: flex-end; /* Align to right */
   align-items: center;
@@ -91,46 +174,70 @@
   border-radius: 15px; /* Slightly less rounded for dropdown feel */
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
-  min-width: 160px; /* Minimum width for the menu */
+  width: 320px; /* Fixed width - same folded and unfolded */
+  padding-top: 50px; /* Reserve space for absolute positioned title */
 }
 
 .pin_at_home-board-menu:hover {
   background: rgba(0, 0, 0, 0.85);
+  padding-top: 0; /* Remove title space when unfolded */
 }
 
-/* Board Title */
+/* Board Title - always absolute so it never affects layout flow */
 .pin_at_home-board-title {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   color: white;
-  padding: 10px 20px;
+  padding: 14px 24px;
   font-size: 16px;
   font-weight: 600;
   letter-spacing: 0.5px;
-  text-transform: capitalize;
   white-space: nowrap;
   display: flex;
   align-items: center;
   gap: 8px;
+  transition: opacity 0.2s ease 0.3s; /* Fade in AFTER menu collapse */
 }
 
-/* Expand indicator */
+/* Unfolding: fade out title */
+.pin_at_home-board-menu:hover .pin_at_home-board-title {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease; /* Fade out immediately */
+}
+
+/* Burger menu icon (three horizontal lines) - fixed position */
 .pin_at_home-board-title::after {
-  content: '▾';
-  font-size: 20px; /* Larger arrow */
+  content: '';
+  width: 20px;
+  position: absolute;
+  right: 24px; /* Match title padding */
+  top: 50%;
+  transform: translateY(-50%);
+  background: white;
   opacity: 0.8;
-  transition: transform 0.3s ease;
-  margin-left: auto; /* Push to right */
+  transition: opacity 0.3s ease;
+  /* Create three lines using box-shadow */
+  box-shadow: 
+    0 -6px 0 white,
+    0 6px 0 white;
+  height: 2px;
+  border-radius: 2px;
 }
 
+/* Transform burger to X when hovering (optional animation) */
 .pin_at_home-board-menu:hover .pin_at_home-board-title::after {
-  transform: rotate(180deg);
+  opacity: 1;
 }
 
 /* Menu Items Container - Hidden by Default */
 .pin_at_home-menu-items {
   display: flex;
   flex-direction: column; /* Vertical stack */
-  align-items: stretch;
-  gap: 4px;
+  align-items: flex-start; /* Don't stretch buttons to full width */
+  gap: 8px; /* Increased gap between items */
   max-height: 0; /* Animate height instead of width */
   opacity: 0;
   padding: 0;
@@ -139,23 +246,14 @@
 }
 
 .pin_at_home-board-menu:hover .pin_at_home-menu-items {
-  max-height: 300px; /* Enough height for items */
+  max-height: 400px; /* Enough height for items */
   opacity: 1;
-  padding: 0 8px 8px 8px; /* Padding at bottom */
+  padding: 16px 20px 16px 20px; /* Equal padding */
 }
 
-/* Divider between title and menu items */
+/* Divider - hidden */
 .pin_at_home-menu-divider {
-  width: 100%;
-  height: 1px; /* Horizontal line */
-  background: rgba(255, 255, 255, 0.2);
-  margin: 4px 0;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.pin_at_home-board-menu:hover .pin_at_home-menu-divider {
-  opacity: 1;
+  display: none;
 }
 
 /* Button Container (for browse button - outside menu) - REMOVED */
@@ -175,11 +273,16 @@
   font-size: 14px;
   font-weight: 500;
   transition: all 0.2s ease;
+  outline: none; /* Remove browser focus outline */
 }
 
 .pin_at_home-btn:hover {
   background: rgba(0, 0, 0, 0.9); /* Darker on hover */
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+}
+
+.pin_at_home-btn:focus {
+  outline: none; /* Ensure no outline on focus */
 }
 
 /* Menu Item Buttons - Smaller, fits in menu */
@@ -188,11 +291,9 @@
   border: none;
   color: white;
   padding: 6px 12px;
-  border-radius: 15px;
+  border-radius: 8px; /* Less rounded edges */
   cursor: pointer;
   font-size: 13px;
-  font-weight: 500;
-  transition: all 0.2s ease;
   font-weight: 500;
   transition: all 0.2s ease;
   white-space: nowrap;
@@ -207,16 +308,82 @@
   transform: scale(1.02);
 }
 
-.pin_at_home-menu-btn.exit {
-  background: rgba(230, 0, 35, 0.8); /* Pinterest Red */
+/* Board item buttons - taller, matches title aesthetic */
+.pin_at_home-menu-btn.board-item {
+  padding: 10px 20px; /* Same padding as board title */
+  font-size: 16px; /* Same font size as board title */
+  font-weight: 600; /* Same weight as board title */
+  letter-spacing: 0.5px; /* Same letter spacing as board title */
+  background: transparent; /* No background by default */
+  border-radius: 8px; /* Moderate rounding */
+  text-transform: none; /* Display text exactly as stored - no case transformation */
+  width: 100%; /* Stretch to full width for consistent alignment */
 }
 
-.pin_at_home-menu-btn.exit:hover {
-  background: rgba(230, 0, 35, 1);
+/* Pin count - fixed width for alignment */
+.pin_at_home-menu-btn.board-item .pin-count {
+  display: inline-block;
+  min-width: 40px; /* Enough for "999+" */
+  text-align: left; /* Align numbers to left */
+  opacity: 0.5;
+  margin-right: 8px;
+}
+
+.pin_at_home-menu-btn.board-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: none; /* No scale effect */
+}
+
+.pin_at_home-menu-btn.board-item.active {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+/* Board row - contains board button + delete button */
+.pin_at_home-board-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.pin_at_home-board-row .pin_at_home-menu-btn.board-item {
+  flex: 1;
+}
+
+/* Delete button - hidden by default, shown on row hover */
+.pin_at_home-delete-btn {
+  opacity: 0;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  padding: 8px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  border-radius: 6px;
+}
+
+.pin_at_home-board-row:hover .pin_at_home-delete-btn {
+  opacity: 1;
+}
+
+.pin_at_home-delete-btn:hover {
+  background: rgba(255, 80, 80, 0.3);
+  color: #ff6b6b;
 }
 
 .pin_at_home-menu-btn.browse {
-  background: rgba(45, 85, 255, 0.8);
+  /* Match board-item style */
+  padding: 10px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  background: transparent;
+  border-radius: 8px;
+  width: 100%;
+  text-align: left;
+  justify-content: flex-start;
+  margin-top: 4px;
 }
 
 .pin_at_home-menu-btn.browse:hover {
@@ -228,14 +395,237 @@
   color: #111;
 }
 
-.pin_at_home-btn.exit {
-  background: rgba(230, 0, 35, 0.8); /* Pinterest Red */
-  border-color: transparent;
+
+
+/* Pause button - icon only, compact */
+.pin_at_home-menu-btn.pause {
+  width: 36px;
+  padding: 6px;
+  font-size: 16px;
+  text-align: center;
+  justify-content: center;
 }
 
-.pin_at_home-btn.exit:hover {
-  background: rgba(230, 0, 35, 1);
+/* Pause Control Container (expandable on hover) */
+.pin_at_home-pause-control {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  display: flex;
+  flex-direction: column-reverse; /* Buttons at bottom, panels expand upward */
+  align-items: flex-start;
+  background: transparent; /* Hidden until hover */
+  border: none;
+  border-radius: 16px;
+  padding: 0;
+  gap: 0;
+  z-index: 4;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: visible;
 }
+
+/* Show container background only when expanded */
+.pin_at_home-pause-control:hover {
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 8px;
+}
+
+/* Buttons row - always visible */
+.pin_at_home-buttons-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Shuffle button (circular) */
+.pin_at_home-pause-control .pin_at_home-btn.shuffle {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0; /* Hide the emoji text */
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.pin_at_home-pause-control:hover .pin_at_home-btn.shuffle,
+.pin_at_home-pause-control:hover .pin_at_home-btn.pause {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+}
+
+/* Shuffle icon - custom SVG */
+.pin_at_home-pause-control .pin_at_home-btn.shuffle::before {
+  content: '';
+  width: 18px;
+  height: 18px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='16 3 21 3 21 8'%3E%3C/polyline%3E%3Cline x1='4' y1='20' x2='21' y2='3'%3E%3C/line%3E%3Cpolyline points='21 16 21 21 16 21'%3E%3C/polyline%3E%3Cline x1='15' y1='15' x2='21' y2='21'%3E%3C/line%3E%3Cline x1='4' y1='4' x2='9' y2='9'%3E%3C/line%3E%3C/svg%3E");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* Pause button (circular) */
+.pin_at_home-pause-control .pin_at_home-btn.pause {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Play icon (triangle) - shown when paused */
+.pin_at_home-pause-control .pin_at_home-btn.pause::before {
+  content: '';
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 7px 0 7px 12px;
+  border-color: transparent transparent transparent white;
+  margin-left: 3px;
+}
+
+/* Pause icon (two bars) - shown when playing */
+.pin_at_home-pause-control .pin_at_home-btn.pause.playing::before {
+  width: 4px;
+  height: 14px;
+  border: none;
+  background: white;
+  border-radius: 1px;
+  margin: 0;
+}
+
+.pin_at_home-pause-control .pin_at_home-btn.pause.playing::after {
+  content: '';
+  width: 4px;
+  height: 14px;
+  background: white;
+  border-radius: 1px;
+  margin-left: 4px;
+}
+
+/* Panels section (hidden by default, expands upward on hover) */
+.pin_at_home-panels-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pin_at_home-pause-control:hover .pin_at_home-panels-section {
+  max-height: 150px;
+  opacity: 1;
+  padding-bottom: 8px; /* Space between panels and buttons */
+}
+
+/* Panel label */
+.pin_at_home-panel-label {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+/* Pin count panel */
+.pin_at_home-count-panel {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Pin count buttons */
+.pin_at_home-count-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  border: none;
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pin_at_home-count-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.pin_at_home-count-btn.active {
+  background: rgba(45, 85, 255, 0.8);
+  color: white;
+}
+
+/* Speed panel */
+.pin_at_home-speed-panel {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Speed Slider Section */
+.pin_at_home-speed-section {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Speed label (tooltip card style) */
+.pin_at_home-speed-label {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.pin_at_home-speed-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.pin_at_home-speed-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #2d55ff;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.pin_at_home-speed-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+
 
 /* The Grid - CSS Grid Layout for Perfect Collage */
 #pin_at_home-grid {
@@ -260,7 +650,7 @@
   border-right: 1px solid #000; /* Subtle separator */
   /* Fade-in animation */
   opacity: 0;
-  animation: fadeInColumn 2.0s ease forwards;
+  animation: fadeInColumn 1.0s ease forwards;
 }
 
 @keyframes fadeInColumn {
@@ -353,7 +743,7 @@
   width: 100vw;
   height: 100vh;
   background: rgba(0, 0, 0, 0.95);
-  z-index: 2147483648; /* Above the main overlay */
+  z-index: 20; /* Above everything except scanner */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -446,17 +836,17 @@
 
 /* Browse All Button */
 .pin_at_home-btn.browse {
-  background: rgba(45, 85, 255, 0.8);
+  background: transparent;
   border-color: transparent;
 }
 
 .pin_at_home-btn.browse:hover {
-  background: rgba(45, 85, 255, 1);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .pin_at_home-btn.browse.active {
-  background: rgba(255, 180, 0, 0.9);
-  color: #111;
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
 }
 
 /* Browse Gallery Container - REMOVED, using main grid instead */
@@ -477,7 +867,7 @@
 }
 
 .pin_at_home-browse-item:hover {
-  z-index: 5;
+  z-index: 25;
 }
 
 /* Selected State - only show border on hover */
@@ -521,7 +911,7 @@
   background: rgba(20, 20, 20, 0.98);
   backdrop-filter: blur(20px);
   border-left: 1px solid rgba(255, 255, 255, 0.1);
-  z-index: 2147483647;
+  z-index: 5;
   display: flex;
   flex-direction: column;
   transform: translateX(100%); /* Start off-screen to the right */
@@ -635,23 +1025,26 @@
 
 .pin_at_home-sidepanel-btn {
   width: 100%;
-  padding: 8px 12px;
+  padding: 10px 20px;
   border: none;
-  border-radius: 20px;
-  font-size: 12px;
+  border-radius: 8px;
+  font-size: 16px;
   font-weight: 600;
+  letter-spacing: 0.5px;
   cursor: pointer;
   transition: all 0.2s ease;
+  text-align: left;
 }
 
 .pin_at_home-sidepanel-btn.create {
-  background: linear-gradient(135deg, #2d55ff, #5b7cff);
+  background: rgba(45, 85, 255, 0.8);
   color: white;
 }
 
 .pin_at_home-sidepanel-btn.create:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(45, 85, 255, 0.4);
+  background: rgba(45, 85, 255, 1);
+  transform: none;
+  box-shadow: none;
 }
 
 .pin_at_home-sidepanel-btn.create:disabled {
@@ -664,7 +1057,7 @@
 .pin_at_home-sidepanel-btn.clear {
   background: transparent;
   color: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid transparent; /* Keep size consistent */
 }
 
 .pin_at_home-sidepanel-btn.clear:hover {
@@ -692,7 +1085,7 @@
   width: 100vw;
   height: 100vh;
   background: #0a0a0a;
-  z-index: 2147483648;
+  z-index: 11;
   display: none;
   overflow: hidden;
 }
@@ -748,7 +1141,7 @@
   padding: 12px 20px;
   border-radius: 30px;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  z-index: 10;
+  z-index: 12;
 }
 
 .pin_at_home-refsheet-controls .pin_at_home-btn {

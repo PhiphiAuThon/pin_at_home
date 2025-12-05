@@ -1,12 +1,10 @@
 // Pin@Home - Scanner Only Mode
-// Runs on Pinterest pages without overlay - just scans and caches
+// Manual trigger scanner with progress reporting
 
 import { CONFIG } from './config.js';
 import { state, updateState } from './state.js';
-import { startScanning } from './scanner.js';
-import { saveLastVisitedBoard } from './cache.js';
-import { updateIndicator } from './ui/scannerIndicator.js';
-import { autoScroll } from './utils.js';
+import { startScanning, getBoardPinCount } from './scanner.js';
+import { createScannerIndicator, updateIndicator } from './ui/scannerIndicator.js';
 
 // Generate cache key from URL
 function generateCacheKey() {
@@ -24,61 +22,38 @@ function extractBoardName() {
   return '';
 }
 
-console.log('🧘 Pin@Home: Scanner mode (no overlay)');
+console.log('🧘 Pin@Home: Scanner loaded - waiting for user trigger');
 
 // Initialize
 const cacheKey = generateCacheKey();
 const boardName = extractBoardName();
-
 updateState({ cacheKey, boardName });
 
-// Start scanning with progress callback
-const onProgress = (count, isDone) => {
-  updateIndicator(count, isDone);
-  
-  if (isDone) {
-    // Don't save as last visited - only manual board selection in new tab should do that
-    console.log(`✅ Pin@Home: Cached ${count} pins from "${boardName}"`);
+// Get initial target count
+const targetCount = getBoardPinCount();
+
+// Create and append indicator with "Scan" button
+const indicator = createScannerIndicator(targetCount);
+document.body.appendChild(indicator);
+
+// Handle scan button click
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.id === 'pin_at_home-scan-btn') {
+    startScanProcess();
   }
-};
-
-// Modified scanning that reports progress
-let lastReportedCount = 0;
-
-const checkProgress = () => {
-  const currentCount = state.pinsFound.length;
-  
-  if (currentCount !== lastReportedCount) {
-    lastReportedCount = currentCount;
-    const isDone = currentCount >= CONFIG.MIN_POOL_SIZE || state.scanAttempts >= CONFIG.MAX_SCAN_ATTEMPTS;
-    onProgress(currentCount, isDone);
-  }
-};
-
-// Auto-scroll to load more pins (Pinterest lazy-loads)
-autoScroll();
-
-// Also scroll periodically during scanning to get more pins
-const scrollInterval = setInterval(() => {
-  window.scrollBy(0, 500);
-}, 1000);
-
-// Start scanning (no callback needed, we poll progress)
-startScanning(() => {
-  // Called when enough pins found
-  clearInterval(scrollInterval);
-  onProgress(state.pinsFound.length, true);
 });
 
-// Poll for progress updates
-const progressInterval = setInterval(() => {
-  checkProgress();
+function startScanProcess() {
+  console.log('🧘 Pin@Home: User started scan');
   
-  // Stop polling when done
-  if (state.scanAttempts >= CONFIG.MAX_SCAN_ATTEMPTS) {
-    clearInterval(progressInterval);
-    clearInterval(scrollInterval);
-    onProgress(state.pinsFound.length, true);
-  }
-}, 500);
-
+  // Start scanning with progress callback
+  const stopScanning = startScanning({
+    onProgress: (progress) => {
+      updateIndicator(progress);
+    },
+    onComplete: (finalCount) => {
+      console.log(`✅ Pin@Home: Cached ${finalCount} pins from "${boardName}"`);
+      // Final update handled by onProgress with isDone: true
+    }
+  });
+}

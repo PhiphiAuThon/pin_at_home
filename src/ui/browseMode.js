@@ -6,6 +6,7 @@ import { state, updateState } from '../state.js';
 import { openFullscreenViewer } from './fullscreenViewer.js';
 import { toggleImageSelection, updateSelectionOrder } from './selection.js';
 import { createSidepanel, updateSidepanel, setExitBrowseModeRef } from './sidepanel.js';
+import { setScrollPaused, isManuallyPaused } from './grid.js';
 
 /**
  * Toggle browse all mode on/off
@@ -32,9 +33,11 @@ function enterBrowseMode(browseBtn) {
   browseBtn.classList.add('active');
   browseBtn.textContent = '← Exit Browse';
   
-  // Hide menu items (shuffle, clear cache, exit) in browse mode
-  const menuItems = document.getElementById('pin_at_home-menu-items');
-  if (menuItems) menuItems.style.display = 'none';
+  // Hide the entire bottom container (board menu and pause control) in browse mode
+  const boardMenu = document.getElementById('pin_at_home-board-menu');
+  const pauseControl = document.querySelector('.pin_at_home-pause-control');
+  if (boardMenu) boardMenu.style.display = 'none';
+  if (pauseControl) pauseControl.style.display = 'none';
   
   // Create sidepanel if it doesn't exist
   if (!state.sidepanel) {
@@ -55,6 +58,9 @@ function enterBrowseMode(browseBtn) {
   // Show sidepanel with animation
   state.sidepanel.classList.add('active');
   
+  // Auto-pause scrolling in browse mode
+  setScrollPaused(true);
+  
   console.log('📋 Entered browse mode');
 }
 
@@ -67,9 +73,11 @@ export function exitBrowseMode(browseBtn) {
   browseBtn.classList.remove('active');
   browseBtn.textContent = '📋 Browse All';
   
-  // Show menu items again
-  const menuItems = document.getElementById('pin_at_home-menu-items');
-  if (menuItems) menuItems.style.display = 'flex';
+  // Show the bottom containers again
+  const boardMenu = document.getElementById('pin_at_home-board-menu');
+  const pauseControl = document.querySelector('.pin_at_home-pause-control');
+  if (boardMenu) boardMenu.style.display = '';
+  if (pauseControl) pauseControl.style.display = '';
   
   // Remove browse-active class to restore grid width
   if (state.grid) {
@@ -82,6 +90,11 @@ export function exitBrowseMode(browseBtn) {
   // Hide sidepanel
   if (state.sidepanel) {
     state.sidepanel.classList.remove('active');
+  }
+  
+  // Resume scrolling if not manually paused
+  if (!isManuallyPaused()) {
+    setScrollPaused(false);
   }
   
   console.log('📋 Exited browse mode');

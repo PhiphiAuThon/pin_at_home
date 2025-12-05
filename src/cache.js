@@ -133,6 +133,22 @@ export async function clearCurrentBoardCache(onClearCallback) {
 }
 
 /**
+ * Delete a specific board's cache by cache key
+ * @param {string} cacheKey - The cache key to delete
+ * @returns {Promise<boolean>} True if deleted successfully
+ */
+export async function deleteBoardCache(cacheKey) {
+  try {
+    await chrome.storage.local.remove([cacheKey]);
+    console.log(`🧹 Deleted cache: ${cacheKey}`);
+    return true;
+  } catch (e) {
+    console.error('Pin@Home: Failed to delete board cache', e);
+    return false;
+  }
+}
+
+/**
  * Clear ALL Pin@Home caches (for deep cleaning)
  * @param {Function} onClearCallback - Callback to execute after clearing all caches
  */
@@ -228,5 +244,57 @@ export async function getLastVisitedBoard() {
   } catch (e) {
     console.warn('Pin@Home: Failed to get last visited board', e);
     return null;
+  }
+}
+
+/**
+ * Get scroll speed percentage from storage
+ * @returns {Promise<number>} Speed percentage (default: 100)
+ */
+export async function getScrollSpeed() {
+  try {
+    const result = await chrome.storage.local.get(['pin_at_home_scroll_speed']);
+    return result.pin_at_home_scroll_speed ?? 100;
+  } catch (e) {
+    console.warn('Pin@Home: Failed to get scroll speed', e);
+    return 100;
+  }
+}
+
+/**
+ * Save scroll speed percentage to storage
+ * @param {number} speed - Speed percentage (-200 to 200)
+ */
+export async function saveScrollSpeed(speed) {
+  try {
+    await chrome.storage.local.set({ pin_at_home_scroll_speed: speed });
+  } catch (e) {
+    console.warn('Pin@Home: Failed to save scroll speed', e);
+  }
+}
+
+/**
+ * Get pin count limit from storage
+ * @returns {Promise<string>} Pin count ('all', '50', '25', '15') - default: 'all'
+ */
+export async function getPinCount() {
+  try {
+    const result = await chrome.storage.local.get(['pin_at_home_pin_count']);
+    return result.pin_at_home_pin_count ?? 'all';
+  } catch (e) {
+    console.warn('Pin@Home: Failed to get pin count', e);
+    return 'all';
+  }
+}
+
+/**
+ * Save pin count limit to storage
+ * @param {string} count - Pin count ('all', '50', '25', '15')
+ */
+export async function savePinCount(count) {
+  try {
+    await chrome.storage.local.set({ pin_at_home_pin_count: count });
+  } catch (e) {
+    console.warn('Pin@Home: Failed to save pin count', e);
   }
 }
