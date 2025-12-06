@@ -280,10 +280,10 @@ export async function saveScrollSpeed(speed) {
 export async function getPinCount() {
   try {
     const result = await chrome.storage.local.get(['pin_at_home_pin_count']);
-    return result.pin_at_home_pin_count ?? 'all';
+    return result.pin_at_home_pin_count ?? '25';
   } catch (e) {
     console.warn('Pin@Home: Failed to get pin count', e);
-    return 'all';
+    return '25';
   }
 }
 
