@@ -1126,8 +1126,7 @@
 }
 
 .pin_at_home-refsheet-image {
-  max-height: calc(50vh - 50px);
-  max-width: calc(33vw - 20px);
+  /* max-width and max-height are set dynamically via JS based on image count */
   width: auto;
   height: auto;
   border-radius: 6px;

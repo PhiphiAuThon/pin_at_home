@@ -182,6 +182,62 @@ function createRefsheetCanvas() {
 }
 
 /**
+ * Calculate optimal grid dimensions for given image count
+ * Returns { cols, rows } that best fits the screen
+ */
+function calculateOptimalGrid(imageCount) {
+  const screenWidth = window.innerWidth;
+  const screenHeight = window.innerHeight;
+  const screenAspect = screenWidth / screenHeight;
+  
+  // Account for padding and gaps
+  const padding = 40; // 20px on each side
+  const gap = 8;
+  const controlsHeight = 80; // Bottom controls area
+  
+  const availableWidth = screenWidth - padding;
+  const availableHeight = screenHeight - padding - controlsHeight;
+  
+  let bestCols = 1;
+  let bestRows = 1;
+  let bestFit = 0;
+  
+  // Try different column counts and find the best fit
+  for (let cols = 1; cols <= imageCount; cols++) {
+    const rows = Math.ceil(imageCount / cols);
+    
+    // Calculate available size per image
+    const imgWidth = (availableWidth - (cols - 1) * gap) / cols;
+    const imgHeight = (availableHeight - (rows - 1) * gap) / rows;
+    
+    // The constraining dimension determines the effective size
+    const effectiveSize = Math.min(imgWidth, imgHeight);
+    
+    // Skip if images would be too small
+    if (effectiveSize < 50) continue;
+    
+    // Calculate how well this fills the screen (higher is better)
+    const totalArea = effectiveSize * effectiveSize * imageCount;
+    const screenArea = availableWidth * availableHeight;
+    const fillRatio = totalArea / screenArea;
+    
+    // Prefer layouts that maximize fill while keeping reasonable aspect
+    const gridAspect = (cols * effectiveSize) / (rows * effectiveSize);
+    const aspectMatch = 1 - Math.abs(gridAspect - screenAspect) / screenAspect;
+    
+    const score = fillRatio * 0.7 + aspectMatch * 0.3;
+    
+    if (score > bestFit) {
+      bestFit = score;
+      bestCols = cols;
+      bestRows = rows;
+    }
+  }
+  
+  return { cols: bestCols, rows: bestRows };
+}
+
+/**
  * Populate refsheet canvas with selected images
  */
 function populateRefsheetCanvas() {
@@ -193,13 +249,34 @@ function populateRefsheetCanvas() {
   const zoomLevel = state.refsheetCanvas.querySelector('.pin_at_home-zoom-level');
   if (zoomLevel) zoomLevel.textContent = '100%';
   
-  // Add images
+  const imageCount = state.selectedImages.length;
+  const { cols, rows } = calculateOptimalGrid(imageCount);
+  
+  // Calculate dynamic image constraints
+  const padding = 40;
+  const gap = 8;
+  const controlsHeight = 80;
+  
+  const availableWidth = window.innerWidth - padding;
+  const availableHeight = window.innerHeight - padding - controlsHeight;
+  
+  const maxImgWidth = (availableWidth - (cols - 1) * gap) / cols;
+  const maxImgHeight = (availableHeight - (rows - 1) * gap) / rows;
+  
+  console.log(`📐 Grid layout: ${cols}x${rows} for ${imageCount} images (max: ${Math.round(maxImgWidth)}x${Math.round(maxImgHeight)}px)`);
+  
+  // Add images with dynamic sizing
   state.selectedImages.forEach((url, index) => {
     const img = document.createElement('img');
     img.className = 'pin_at_home-refsheet-image';
     img.src = url;
     img.alt = `Reference ${index + 1}`;
     img.draggable = false;
+    
+    // Apply dynamic constraints
+    img.style.maxWidth = `${maxImgWidth}px`;
+    img.style.maxHeight = `${maxImgHeight}px`;
+    
     grid.appendChild(img);
   });
 }
