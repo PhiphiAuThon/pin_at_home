@@ -1,6 +1,8 @@
-// Board Menu Component
 import { toggleBrowseMode } from '../browseMode.js';
-import { deleteBoardCache, getAllCachedBoards } from '../../cache.js';
+import { deleteBoardCache, getUnifiedBoards } from '../../cache.js';
+import { saveDirectoryHandle } from '../../utils/localFolderManager.js';
+import { state, updateState } from '../../state.js';
+import { renderPins } from '../grid.js';
 
 // Callbacks set by parent
 let onBoardSwitch = null;
@@ -19,7 +21,8 @@ export function createBoardMenu(boards, currentBoard) {
   const title = document.createElement('div');
   title.className = 'pin_at_home-board-title';
   title.id = 'pin_at_home-board-title';
-  title.textContent = capitalizeWords(currentBoard.boardName) || 'Select Board';
+  const isLocal = currentBoard.type === 'local' || currentBoard.cacheKey?.startsWith('local_');
+  title.textContent = (isLocal ? currentBoard.boardName : capitalizeWords(currentBoard.boardName)) || 'Select Board';
   
   const items = document.createElement('div');
   items.className = 'pin_at_home-menu-items';
@@ -30,6 +33,7 @@ export function createBoardMenu(boards, currentBoard) {
     items.appendChild(createMenuDivider());
   }
   
+  items.appendChild(createLinkLocalFolderButton());
   items.appendChild(createBrowseButton());
   
   menu.appendChild(title);
@@ -54,8 +58,13 @@ function createBoardList(boards, currentBoard) {
     btn.className = 'pin_at_home-menu-btn board-item';
     if (board.cacheKey === currentBoard.cacheKey) btn.classList.add('active');
     
-    const count = board.imageCount > 999 ? '999+' : board.imageCount;
-    btn.innerHTML = `<span class="pin-count">${count}</span> ${capitalizeWords(board.boardName)}`;
+    if (board.type === 'local' || board.cacheKey.startsWith('local_')) {
+      const folderIcon = '📁 ';
+      btn.innerHTML = `<span class="pin-count">${folderIcon}</span> ${board.boardName}`;
+    } else {
+      const count = board.imageCount > 999 ? '999+' : board.imageCount;
+      btn.innerHTML = `<span class="pin-count">${count}</span> ${capitalizeWords(board.boardName)}`;
+    }
     btn.onclick = () => onBoardSwitch?.(board, boards);
     
     // Delete button
@@ -65,9 +74,9 @@ function createBoardList(boards, currentBoard) {
     delBtn.title = 'Delete cache';
     delBtn.onclick = async (e) => {
       e.stopPropagation();
-      if (confirm(`Delete "${board.boardName}" cache?`)) {
+      if (confirm(`Delete "${board.boardName}"?`)) {
         await deleteBoardCache(board.cacheKey);
-        const updatedBoards = await getAllCachedBoards();
+        const updatedBoards = await getUnifiedBoards();
         onBoardDeleted?.(board, updatedBoards, currentBoard);
       }
     };
@@ -84,8 +93,79 @@ function createBrowseButton() {
   const btn = document.createElement('button');
   btn.id = 'pin_at_home-browse-btn';
   btn.className = 'pin_at_home-menu-btn browse';
-  btn.textContent = 'Make Ref Sheet';
+  btn.textContent = '🎨 Make Ref Sheet';
   btn.onclick = () => toggleBrowseMode(btn);
+  return btn;
+}
+
+function createLinkLocalFolderButton() {
+  const btn = document.createElement('button');
+  btn.className = 'pin_at_home-menu-btn browse';
+  btn.style.marginTop = '0';
+  btn.innerHTML = '📁 Link Local Folder';
+  
+  // Create a hidden input for folder selection
+  const hiddenInput = document.createElement('input');
+  hiddenInput.type = 'file';
+  hiddenInput.webkitdirectory = true;
+  hiddenInput.style.display = 'none';
+
+  hiddenInput.onchange = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    try {
+      // Create a temporary "local board" from the files
+      const firstFile = files[0];
+      const folderName = (firstFile.webkitRelativePath && firstFile.webkitRelativePath.split('/')[0]) || 'Local Folder';
+      const boardId = `local_session_${Date.now()}`;
+      
+      // Filter for images
+      const validExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+      const imageFiles = files.filter(file => {
+        const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+        return validExtensions.includes(ext);
+      });
+
+      if (imageFiles.length === 0) {
+        alert('No valid images found in the selected folder.');
+        return;
+      }
+
+      // Generate Blob URLs
+      const urls = imageFiles.map(file => URL.createObjectURL(file));
+      const revokeAll = () => {
+        urls.forEach(url => URL.revokeObjectURL(url));
+        console.log(`Session: Revoked ${urls.length} Blob URLs`);
+      };
+
+      // Handle the "switch" manually for session boards
+      if (state.revokeBlobUrls) {
+        state.revokeBlobUrls();
+      }
+
+      updateState({ 
+        cacheKey: boardId, 
+        boardName: folderName, 
+        pinsFound: urls, 
+        revokeBlobUrls: revokeAll 
+      });
+
+      updateBoardTitle(folderName, true);
+      renderPins();
+      
+      // Cleanup input
+      hiddenInput.value = '';
+    } catch (err) {
+      console.error('Failed to process folder:', err);
+      alert('Failed to process folder');
+    }
+  };
+
+  btn.onclick = () => {
+    hiddenInput.click();
+  };
+  
   return btn;
 }
 
@@ -96,9 +176,9 @@ function createMenuDivider() {
   return div;
 }
 
-export function updateBoardTitle(boardName) {
+export function updateBoardTitle(boardName, isLocal = false) {
   const title = document.getElementById('pin_at_home-board-title');
-  if (title) title.textContent = capitalizeWords(boardName);
+  if (title) title.textContent = isLocal ? boardName : capitalizeWords(boardName);
 }
 
 export function rebuildBoardMenu(boards, currentBoard) {
@@ -112,6 +192,7 @@ export function rebuildBoardMenu(boards, currentBoard) {
     menuItems.appendChild(createMenuDivider());
   }
   
+  menuItems.appendChild(createLinkLocalFolderButton());
   menuItems.appendChild(createBrowseButton());
 }
 

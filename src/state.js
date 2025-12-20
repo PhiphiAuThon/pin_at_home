@@ -19,7 +19,9 @@ export const state = {
   browseGallery: null,
   sidepanel: null,
   // New tab mode
-  isNewTabMode: false
+  isNewTabMode: false,
+  // Local Sourcing
+  revokeBlobUrls: null
 };
 
 /**

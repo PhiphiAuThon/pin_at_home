@@ -12,6 +12,7 @@ I personally set a Pinterest board as new tab page on my browser to get random i
 - **Refsheet Canvas**: Create reference sheets from selected pins
 - **Sidepanel Shuffle**: Shuffle visible pins directly from the reference sheet sidepanel
 - **Multi-board Caching**: Pins are cached per board for instant loading
+- **Local Folder Support**: Load images from your computer as a temporary session board
 
 ## 🚀 Setup
 
@@ -76,6 +77,12 @@ pin_at_home/
     *   **Refsheet**: Create a reference sheet from selected pins.
     *   **Sidepanel Shuffle**: In the sidepanel, click "Shuffle Results" to randomize the visible pins.
     *   **Clear Cache**: Clear cached images for the current board.
+
+5.  **Local Folder**
+    *   Click the board title (top-left) to open the menu.
+    *   Select **"Link Local Folder"** and pick a folder with images.
+    *   These are for the current session only and not stored in cache.
+
 
 ## 🐛 Troubleshooting
 

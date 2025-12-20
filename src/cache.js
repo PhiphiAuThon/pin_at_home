@@ -2,6 +2,7 @@
 import { CONFIG } from './config.js';
 import { state, updateState } from './state.js';
 import { isContextInvalidated, showReloadNotification } from './utils.js';
+import { getAllDirectoryHandles } from './utils/localFolderManager.js';
 
 // Debounce timer for cache saves
 let saveCacheTimer = null;
@@ -106,7 +107,12 @@ export async function clearCurrentBoardCache(onClearCallback) {
   
   try {
     // Remove current board's cache
-    await chrome.storage.local.remove([state.cacheKey]);
+    if (state.cacheKey?.startsWith('local_')) {
+      const { removeDirectoryHandle } = await import('./utils/localFolderManager.js');
+      await removeDirectoryHandle(state.cacheKey);
+    } else {
+      await chrome.storage.local.remove([state.cacheKey]);
+    }
     console.log(`🧹 Cleared cache for: ${state.cacheKey}`);
     
     // Clear current state
@@ -139,7 +145,12 @@ export async function clearCurrentBoardCache(onClearCallback) {
  */
 export async function deleteBoardCache(cacheKey) {
   try {
-    await chrome.storage.local.remove([cacheKey]);
+    if (cacheKey.startsWith('local_')) {
+      const { removeDirectoryHandle } = await import('./utils/localFolderManager.js');
+      await removeDirectoryHandle(cacheKey);
+    } else {
+      await chrome.storage.local.remove([cacheKey]);
+    }
     console.log(`🧹 Deleted cache: ${cacheKey}`);
     return true;
   } catch (e) {
@@ -216,6 +227,25 @@ export async function getAllCachedBoards() {
     console.warn('Pin@Home: Failed to get cached boards', e);
     return [];
   }
+}
+
+/**
+ * Get unified list of boards (Pinterest + Local)
+ */
+export async function getUnifiedBoards() {
+  const [pinterestBoards, localHandles] = await Promise.all([
+    getAllCachedBoards(),
+    getAllDirectoryHandles()
+  ]);
+  
+  const localBoards = localHandles.map(item => ({
+    cacheKey: item.id,
+    boardName: item.name,
+    imageCount: '', // Used for folder icon identification
+    type: 'local'
+  }));
+  
+  return [...localBoards, ...pinterestBoards];
 }
 
 /**
